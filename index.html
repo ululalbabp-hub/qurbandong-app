@@ -4477,6 +4477,60 @@ function waParse(text, ctx) {
   });
   return out;
 }
+/** Ubah usulan AI (JSON) menjadi catatan yang sama bentuknya dengan hasil waParse, lengkap dengan pemeriksaan. */
+function waDariAi(records, tidakJelas, ctx) {
+  var out = [], L = ctx.lists || {};
+  var tagOf = function (t) { t = String(t || '').toLowerCase(); for (var i = 0; i < (ctx.domba || []).length; i++) if (ctx.domba[i].t.toLowerCase() === t) return ctx.domba[i]; return null; };
+  var angka = function (v) { if (typeof v === 'number') return isFinite(v) ? v : null; var u = waBerat(String(v || '').replace(/\s/g, '')); return u; };
+  var rupiah = function (v) { if (typeof v === 'number') return isFinite(v) ? Math.round(v) : null; return waUang(String(v || '')); };
+  (records || []).forEach(function (r) {
+    if (!r || typeof r !== 'object') return;
+    var tgl = /^\d{4}-\d{2}-\d{2}$/.test(String(r.tanggal || '')) && waIso(+r.tanggal.slice(0, 4), +r.tanggal.slice(5, 7), +r.tanggal.slice(8, 10)) || ctx.today;
+    var o = { jenis: String(r.jenis || ''), tanggal: tgl, line: String(r.sumber || '').slice(0, 120), ai: true };
+    var j = o.jenis;
+    if (j === 'timbang') {
+      var d = tagOf(r.tag), kg = angka(r.bobot); o.tag = r.tag; o.bobot = kg;
+      if (!d) o.err = 'Eartag ' + r.tag + ' tidak ditemukan';
+      else if (d.s === 'Terjual' || d.s === 'Mati') o.err = d.t + ' berstatus ' + d.s;
+      else if (kg === null || kg < 1 || kg > 300) o.err = 'Bobot ' + d.t + ' tidak wajar: ' + r.bobot;
+      else { o.tag = d.t; o.label = d.t + ' ' + String(kg).replace('.', ',') + ' kg'; if (typeof d.b === 'number' && d.b > 0) { var sel = kg - d.b; if (sel < -3 || sel > 15) o.warn = (sel < 0 ? 'turun ' : 'naik ') + Math.abs(sel).toFixed(1) + ' kg dari timbangan terakhir'; } }
+    } else if (j === 'kondisi') {
+      var dm = tagOf(r.tag), st = String(r.status || '').trim(); st = st ? st.charAt(0).toUpperCase() + st.slice(1).toLowerCase() : '';
+      var pd = r.pindah ? waCocok(r.pindah, L.kandang || []) : '', hg = r.harga !== undefined && r.harga !== null && r.harga !== '' ? rupiah(r.harga) : '';
+      o.tag = r.tag; o.status = st; o.pindah = pd || ''; o.harga = hg === null ? '' : hg; o.ket = String(r.ket || '').slice(0, 150);
+      if (!dm) o.err = 'Eartag ' + r.tag + ' tidak ditemukan';
+      else if (st && ['Sehat', 'Sakit', 'Terjual', 'Mati'].indexOf(st) < 0) o.err = 'Status tidak dikenal: ' + r.status;
+      else if (r.pindah && !pd) o.err = 'Kandang tujuan tidak dikenali: ' + r.pindah;
+      else if (!st && !pd) o.err = 'Tidak ada status atau kandang tujuan';
+      else {
+        o.tag = dm.t;
+        o.label = dm.t + ': ' + [st, pd ? 'pindah ke ' + pd : '', o.harga !== '' ? 'Rp ' + Number(o.harga).toLocaleString('id-ID') : ''].filter(Boolean).join(', ');
+        if (st === 'Terjual' && o.harga === '') o.warn = 'harga jual belum diisi';
+        if ((dm.s === 'Terjual' || dm.s === 'Mati') && st) o.warn = (o.warn ? o.warn + '; ' : '') + 'sebelumnya berstatus ' + dm.s;
+      }
+    } else if (j === 'pakan') {
+      var tp = String(r.tipe || '').toLowerCase(), it = waCocok(r.item, L.pakan || []), kg2 = angka(r.kg), h2 = r.harga !== undefined && r.harga !== null && r.harga !== '' ? rupiah(r.harga) : '';
+      o.tipe = tp; o.item = it; o.kg = kg2; o.harga = h2 === null ? '' : h2; o.ket = String(r.ket || '').slice(0, 150);
+      if (['beli', 'pakai', 'koreksi'].indexOf(tp) < 0) o.err = 'Jenis transaksi pakan tidak jelas';
+      else if (!it) o.err = 'Jenis pakan tidak dikenali: ' + r.item + (L.pakan && L.pakan.length ? ' (pilihan: ' + L.pakan.join(', ') + ')' : '');
+      else if (kg2 === null || kg2 <= 0) o.err = 'Jumlah (kg) tidak terbaca';
+      else o.label = { beli: 'Beli ', pakai: 'Pakai ', koreksi: 'Koreksi stok ' }[tp] + it + ' ' + String(kg2).replace('.', ',') + ' kg' + (o.harga !== '' && tp === 'beli' ? ' @Rp ' + Number(o.harga).toLocaleString('id-ID') : '');
+    } else if (j === 'keuangan') {
+      var kt = waCocok(r.kategori, L.kategori || []), jm = rupiah(r.jumlah), mt = String(r.metode || 'Tunai').toLowerCase();
+      mt = /transfer|tf|trf/.test(mt) ? 'Transfer' : /lain/.test(mt) ? 'Lainnya' : 'Tunai';
+      var pm = r.pemilik ? waCocok(r.pemilik, L.pemilik || []) : '';
+      o.kategori = kt; o.jumlah = jm; o.metode = mt; o.pemilik = pm || ''; o.ref = String(r.ref || '').slice(0, 60); o.ket = String(r.ket || '').slice(0, 150);
+      if (ctx.role !== 'admin') o.err = 'Catat kas khusus pengelola';
+      else if (!kt) o.err = 'Kategori tidak dikenali: ' + r.kategori;
+      else if (jm === null || jm <= 0) o.err = 'Jumlah rupiah tidak terbaca';
+      else if (r.pemilik && !pm) o.err = 'Pemilik tidak dikenali: ' + r.pemilik;
+      else o.label = kt + ' Rp ' + Number(jm).toLocaleString('id-ID') + ' (' + mt + ')';
+    } else { o.jenis = 'tak'; o.err = 'Jenis catatan tidak dikenal'; }
+    out.push(o);
+  });
+  (tidakJelas || []).forEach(function (x) { if (x) out.push({ jenis: 'tak', tanggal: ctx.today, line: String((x.sumber) || '').slice(0, 120), err: 'AI ragu: ' + String(x.alasan || 'maksud tidak jelas').slice(0, 140), ai: true }); });
+  return out;
+}
 //WAPARSE_END
 
 var WA_CONTOH = 'tgl hari ini\n' +
@@ -4494,9 +4548,10 @@ function waOpen() {
   var h = '<h3 style="margin:0 0 4px">Tempel dari WhatsApp</h3>' +
     '<p class="muted small" style="margin:0 0 8px">Tempel pesan dari grup WhatsApp. Satu baris = satu data. Hasilnya diperiksa dulu sebelum disimpan.</p>' +
     '<textarea id="wa-t" rows="8" placeholder="mis.\ntimbang\nJ-001 35,5\nJ-002 36\nsakit J-003 diare\npakan keluar Silase 120" style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--tx)"></textarea>' +
-    '<div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap"><button class="btn" type="button" id="wa-baca">Baca pesan</button><button class="btn ghost" type="button" id="wa-tempel">Tempel dari clipboard</button><button class="btn ghost" type="button" id="wa-contoh">Isi contoh</button></div>' +
+    '<div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap"><button class="btn" type="button" id="wa-ai">Baca dengan AI</button><button class="btn ghost" type="button" id="wa-baca">Baca cepat</button><button class="btn ghost" type="button" id="wa-tempel">Tempel dari clipboard</button></div>' +
+    '<p class="muted small" style="margin:-2px 0 6px"><b>AI</b> memahami bahasa bebas (butuh sinyal). <b>Baca cepat</b> memakai format baku, tanpa sinyal. Keduanya diperiksa dulu sebelum disimpan. <a href="#" id="wa-contoh">Isi contoh</a></p>' +
     '<div id="wa-prev"></div>' +
-    '<details style="margin-top:10px"><summary class="muted small" style="cursor:pointer">Cara menulis pesan</summary><div class="muted small" style="line-height:1.6;margin-top:6px">' +
+    '<details style="margin-top:10px"><summary class="muted small" style="cursor:pointer">Format untuk Baca cepat (tanpa AI)</summary><div class="muted small" style="line-height:1.6;margin-top:6px">' +
     '<b>Timbang massal:</b> <code>timbang</code> lalu tiap baris <code>J-001 35,5</code> (boleh satu baris dipisah koma)<br>' +
     '<b>Kondisi:</b> <code>sakit J-003 diare</code> · <code>sehat J-003</code> · <code>jual J-004 2.800.000</code> · <code>mati J-006</code> · <code>pindah J-005 K2</code><br>' +
     '<b>Pakan:</b> <code>pakan masuk Silase 500 @1500</code> (harga per kg, opsional) · <code>pakan keluar Silase 120</code> · <code>pakan koreksi Silase 340</code><br>' +
@@ -4504,27 +4559,41 @@ function waOpen() {
     '<b>Tanggal:</b> baris <code>tgl kemarin</code> atau <code>tgl 25/10</code> berlaku untuk baris di bawahnya. Tanpa itu dipakai tanggal pesan WhatsApp (bila ikut tersalin) atau hari ini.</div></details>';
   showSheet(h);
   var ta = $('#wa-t');
-  $('#wa-contoh').addEventListener('click', function () { ta.value = WA_CONTOH; waBaca(); });
+  $('#wa-contoh').addEventListener('click', function (e) { e.preventDefault(); ta.value = WA_CONTOH; waBaca(); });
   $('#wa-baca').addEventListener('click', waBaca);
+  $('#wa-ai').addEventListener('click', waBacaAi);
   $('#wa-tempel').addEventListener('click', async function () {
-    try { var t = await navigator.clipboard.readText(); if (t) { ta.value = t; waBaca(); } else toast('Clipboard kosong', 'warn'); }
+    try { var t = await navigator.clipboard.readText(); if (t) { ta.value = t; $('#wa-prev').innerHTML = '<p class="muted small">Pesan ditempel. Klik Baca dengan AI atau Baca cepat.</p>'; } else toast('Clipboard kosong', 'warn'); }
     catch (e) { toast('Izin clipboard ditolak. Tempel manual di kotak.', 'warn'); ta.focus(); }
   });
   ta.focus();
 }
 var WA_RES = [];
-function waBaca() {
-  var res = waParse($('#wa-t').value, waCtx()), box = $('#wa-prev'); WA_RES = res;
-  if (!res.length) { box.innerHTML = '<p class="muted small">Belum ada isi.</p>'; return; }
+function waBaca() { waTampil(waParse($('#wa-t').value, waCtx()), false); }
+async function waBacaAi() {
+  var teks = $('#wa-t').value.trim(), box = $('#wa-prev');
+  if (!teks) { box.innerHTML = '<p class="muted small">Tempel pesan dulu.</p>'; return; }
+  var b = $('#wa-ai'); b.disabled = true; b.textContent = 'AI membaca…'; box.innerHTML = '<p class="muted small">Memahami pesan…</p>';
+  try {
+    var r = await api('wa_aiBaca', S.pin, teks);
+    if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi.'); return; }
+    if (!r.ok) { box.innerHTML = '<p class="neg small">' + esc(r.error || 'AI gagal') + '</p><p class="muted small">Anda tetap bisa pakai <b>Baca cepat</b> dengan format baku.</p>'; return; }
+    waTampil(waDariAi(r.records, r.tidakJelas, waCtx()), true);
+  } catch (e) { box.innerHTML = '<p class="neg small">Tidak terhubung ke server. Coba lagi, atau pakai <b>Baca cepat</b>.</p>'; }
+  finally { b.disabled = false; b.textContent = 'Baca dengan AI'; }
+}
+function waTampil(res, ai) {
+  var box = $('#wa-prev'); WA_RES = res;
+  if (!res.length) { box.innerHTML = '<p class="muted small">' + (ai ? 'AI tidak menemukan data yang bisa dicatat di pesan ini.' : 'Belum ada isi.') + '</p>'; return; }
   var ok = res.filter(function (r) { return !r.err; }).length, bad = res.length - ok;
   var JN = { timbang: 'Timbang', kondisi: 'Kondisi', pakan: 'Pakan', keuangan: 'Kas', tgl: 'Tanggal', tak: '?' };
-  box.innerHTML = '<div class="muted small" style="margin:4px 0 6px"><b>' + ok + '</b> siap disimpan' + (bad ? ' · <b class="neg">' + bad + ' perlu diperbaiki</b>' : '') + '</div>' +
+  box.innerHTML = '<div class="muted small" style="margin:4px 0 6px">' + (ai ? 'Dibaca AI. <b>Periksa dulu</b> sebelum menyimpan. ' : '') + '<b>' + ok + '</b> siap disimpan' + (bad ? ' · <b class="neg">' + bad + ' perlu diperbaiki</b>' : '') + '</div>' +
     res.map(function (r) {
       return '<div class="row" style="align-items:flex-start;gap:8px"><div class="a" style="min-width:0"><b>' + esc(JN[r.jenis] || '') + ' · ' + esc(r.tanggal) + '</b>' +
-        '<span>' + (r.err ? '<span class="neg">' + esc(r.err) + '</span><br><span class="muted">' + esc(r.line) + '</span>' : esc(r.label) + (r.warn ? '<br><span style="color:#b5530a">Cek: ' + esc(r.warn) + '</span>' : '')) + '</span></div></div>';
+        '<span>' + (r.err ? '<span class="neg">' + esc(r.err) + '</span><br><span class="muted">' + esc(r.line) + '</span>' : esc(r.label) + (r.warn ? '<br><span style="color:#b5530a">Cek: ' + esc(r.warn) + '</span>' : '') + (r.ai && r.line ? '<br><span class="muted">“' + esc(r.line) + '”</span>' : '')) + '</span></div></div>';
     }).join('') +
     '<button class="btn" type="button" id="wa-simpan" style="width:100%;margin-top:10px"' + (ok ? '' : ' disabled') + '>Simpan ' + ok + ' data</button>' +
-    (bad ? '<p class="muted small">Baris yang salah tidak disimpan. Perbaiki di kotak lalu klik Baca pesan lagi.</p>' : '');
+    (bad ? '<p class="muted small">Baris yang salah tidak disimpan. Perbaiki di kotak lalu baca lagi.</p>' : '');
   var b = $('#wa-simpan'); if (b) b.addEventListener('click', waSimpan);
 }
 function waHash(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
