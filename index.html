@@ -70,7 +70,6 @@ input:focus,select:focus{outline:2px solid var(--g2);border-color:var(--g2)}
 .toast{position:fixed;left:12px;right:12px;bottom:84px;z-index:60;background:#263238;color:#fff;padding:12px 14px;border-radius:12px;font-size:14px;white-space:pre-line;opacity:0;transform:translateY(12px);transition:.2s;pointer-events:none}
 .toast.show{opacity:1;transform:none}.toast.ok{background:#1e6b34}.toast.warn{background:#9c5700}.toast.err{background:#9c0006}
 .sesi{font-size:13px;color:var(--mu)}.sesi div{padding:4px 0;border-bottom:1px dashed #dfe6e0}
-.top{padding-top:calc(10px + env(safe-area-inset-top))}
 .neg{color:var(--bad)}.pos{color:var(--ok)}
 .tbl td:first-child{white-space:nowrap}.panel h3{margin-top:14px}.panel h3:first-child{margin-top:0}
 .thumbs{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
@@ -605,6 +604,30 @@ main{padding-bottom:92px}
 .rep-r .btn svg{width:18px;height:18px}
 .addsh-i.on{background:#e4ece0}
 .addsh-i.on .ai{background:var(--g);color:#fff}
+
+.login .lbox{width:100%;max-width:320px;display:flex;flex-direction:column;align-items:center}
+.login .lbox input[type=text],.login .lbox input[type=password]{font-size:16px;padding:13px;margin:7px 0}
+.lnk{background:none;border:0;color:var(--g);font:inherit;font-size:14px;text-decoration:underline;padding:8px;cursor:pointer;margin-top:4px}
+.ok-msg{color:var(--ok)!important;font-weight:600}
+.acc-r{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid #eef2ee}
+.acc-r .n{min-width:0}.acc-r .n b{display:block}.acc-r .n span{font-size:12.5px;color:var(--mu)}
+.acc-b{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.acc-b button{font:inherit;font-size:12.5px;padding:6px 11px;border-radius:99px;border:1px solid var(--bd);background:var(--card);color:var(--tx);cursor:pointer}
+.acc-b button.pri{background:var(--g);color:#fff;border-color:var(--g)}.acc-b button.bad{color:#9c0006}
+.acc-h{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mu);font-weight:700;margin:14px 0 2px}
+.acc-f label{display:block;font-size:13px;color:var(--mu);margin:8px 0 3px}.acc-f input,.acc-f select{width:100%;box-sizing:border-box;padding:11px;border:1px solid var(--bd);border-radius:10px;font:inherit;background:var(--card)}
+.mut-sum{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:8px 0}
+.mut-sum div{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px 12px}
+.mut-sum span{display:block;font-size:12px;color:var(--mu)}.mut-sum b{font-size:16px}
+.mut-f{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:6px 0}
+.mut-f button,.mut-f select{font:inherit;font-size:13px;padding:6px 12px;border-radius:99px;border:1px solid var(--bd);background:var(--card);color:var(--tx)}
+.mut-f button.on{background:var(--g);color:#fff;border-color:var(--g)}
+.mut-d{font-size:12px;font-weight:700;color:var(--mu);margin:14px 2px 4px}
+.mut-t{display:flex;justify-content:space-between;gap:10px;padding:10px 12px;background:var(--card);border:1px solid var(--bd);border-radius:12px;margin-bottom:6px}
+.mut-t .l{min-width:0}.mut-t .l b{display:block;font-size:14px}.mut-t .l span{display:block;font-size:12.5px;color:var(--mu);overflow-wrap:anywhere}
+.mut-t .l .by{display:inline-block;margin-top:3px;font-size:11.5px;font-weight:600;background:#e6efe3;color:#0d4715;border-radius:99px;padding:1px 9px}
+.mut-t .r{text-align:right;white-space:nowrap}.mut-t .r b{display:block;font-size:14.5px}.mut-t .r span{font-size:11.5px;color:var(--mu)}
+.top{padding-top:calc(10px + env(safe-area-inset-top))}
 </style>
 </head>
 <body>
@@ -612,12 +635,27 @@ main{padding-bottom:92px}
 <section id="login" class="login">
   <img class="llogo" data-logo alt="Qurbandong">
   <h1>Qurbandong Farm</h1>
-  <p class="muted">Masukkan PIN untuk masuk</p>
   <div id="srvbox" hidden style="width:100%;max-width:320px"><input id="srv" type="text" placeholder="Alamat server (https://script.google.com/macros/s/.../exec)" autocapitalize="off" autocomplete="off" style="font-size:14px"><div class="muted small">Alamat dari pengelola. Cukup diisi sekali.</div></div>
-  <input id="pin" type="password" autocomplete="current-password" placeholder="PIN" autocapitalize="off">
-  <label class="chk" style="margin-top:0"><input type="checkbox" id="remember" checked> Ingat di HP ini</label>
-  <button id="btnLogin" class="btn" type="button">Masuk</button>
-  <div id="loginErr" class="err"></div>
+  <div id="loginBox" class="lbox">
+    <p class="muted">Masuk dengan akun Anda</p>
+    <input id="usr" type="text" autocomplete="username" placeholder="Nama pengguna" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <input id="pin" type="password" autocomplete="current-password" placeholder="Kata sandi" autocapitalize="off">
+    <label class="chk" style="margin-top:0"><input type="checkbox" id="remember" checked> Ingat di HP ini</label>
+    <button id="btnLogin" class="btn" type="button">Masuk</button>
+    <div id="loginErr" class="err"></div>
+    <button id="goSignup" class="lnk" type="button">Belum punya akun? Daftar</button>
+    <div class="muted small" style="margin-top:6px">Investor: kosongkan nama pengguna, isi PIN dari pengelola.</div>
+  </div>
+  <div id="signupBox" class="lbox" hidden>
+    <p class="muted">Daftar akun baru. Pengelola perlu menyetujui sebelum Anda bisa masuk.</p>
+    <input id="su-nama" type="text" placeholder="Nama lengkap" autocomplete="name" maxlength="24">
+    <input id="su-usr" type="text" placeholder="Nama pengguna (huruf kecil/angka)" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="20">
+    <input id="su-pw" type="password" placeholder="Kata sandi (min. 6 karakter)" autocomplete="new-password" autocapitalize="off">
+    <input id="su-pw2" type="password" placeholder="Ulangi kata sandi" autocomplete="new-password" autocapitalize="off">
+    <button id="btnSignup" class="btn" type="button">Kirim pendaftaran</button>
+    <div id="signupMsg" class="err"></div>
+    <button id="goLogin" class="lnk" type="button">Sudah punya akun? Masuk</button>
+  </div>
 </section>
 
 <div id="shell" hidden>
@@ -693,6 +731,7 @@ main{padding-bottom:92px}
     <section id="s-keu" class="screen" hidden></section>
     <section id="s-inv" class="screen" hidden></section>
     <section id="s-lap" class="screen" hidden></section>
+    <section id="s-mut" class="screen" hidden></section>
     <section id="s-kandang" class="screen" hidden></section>
   </main>
   <div id="addOv" class="drw-ov" hidden></div>
@@ -1973,7 +2012,7 @@ function run(){let ok=null,fail=null;const p=new Proxy({},{get(_,k){
     else if(k==='simpanKondisi'){const d=args[0]||{};pr=O.api('wa_simpan',ap.pin,'kondisi',{tanggal:d.tanggal,eartag:d.tag,status:d.status,pindah:d.pindah,ket:d.ket,harga:d.harga},uid())}
     else{fail&&fail(new Error('Fungsi tidak dikenal: '+String(k)));return}
     pr.then(r=>{
-      if(r&&r.pinSalah){O.logout('PIN sudah berubah. Masuk lagi.');return}
+      if(r&&r.pinSalah){O.logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.');return}
       if(r&&r.ok===false){fail&&fail(new Error(r.error||'Gagal'));return}
       if(k==='daftarLaporan'){ok&&ok(r.daftar||[]);return}
       ok&&ok(r)
@@ -2539,21 +2578,23 @@ function chip(txt) { return '<span class="chip c-' + esc(txt || 'x') + '">' + es
 
 /* ---------------- sesi tersimpan di HP ---------------- */
 function saveSession() {
-  store.set('qf_session', JSON.stringify({ pin: S.pin, role: S.role, nama: S.nama, ringkas: S.ringkas, domba: S.domba, lists: S.lists, ts: S.ts, lap: S.lap, investor: S.investor, inv: S.inv, invList: S.invList, invPilih: S.invPilih }));
+  store.set('qf_session', JSON.stringify({ pin: S.pin, me: S.me, role: S.role, nama: S.nama, ringkas: S.ringkas, domba: S.domba, lists: S.lists, ts: S.ts, lap: S.lap, investor: S.investor, inv: S.inv, invList: S.invList, invPilih: S.invPilih }));
 }
 function loadSession() {
   try { var o = JSON.parse(store.get('qf_session') || 'null'); return o && o.pin ? o : null; } catch (e) { return null; }
 }
 function logout(msg) {
-  store.del('qf_session'); S.pin = ''; S.ringkas = null; S.domba = null; S.inv = null; S.lap = null; S.dok = null; S.investor = ''; S.invPilih = ''; S.tab = 'home'; KDL.reset();
-  $('#shell').hidden = true; $('#login').hidden = false; $('#pin').value = '';
-  $('#loginErr').textContent = msg || '';
+  store.del('qf_session'); S.pin = ''; S.me = null; S.mut = null; S.akun = null; S.akunMenunggu = 0; S.ringkas = null; S.domba = null; S.inv = null; S.lap = null; S.dok = null; S.investor = ''; S.invPilih = ''; S.tab = 'home'; KDL.reset();
+  $('#shell').hidden = true; $('#login').hidden = false; $('#pin').value = ''; showLoginBox(false);
+  $('#loginErr').className = 'err'; $('#loginErr').textContent = msg || '';
 }
 
 /* ---------------- login ---------------- */
 async function doLogin() {
-  var pin = $('#pin').value.trim();
-  if (!pin) { $('#loginErr').textContent = 'Isi PIN dulu'; return; }
+  var usr = $('#usr').value.trim().toLowerCase(), pw = $('#pin').value;
+  if (!pw) { $('#loginErr').textContent = 'Isi kata sandi dulu'; return; }
+  if (usr && !/^[a-z0-9._-]{3,20}$/.test(usr)) { $('#loginErr').textContent = 'Nama pengguna: huruf kecil/angka, 3-20 karakter'; return; }
+  var cred = usr ? usr + ':' + pw : pw.trim();
   if (needServer()) {
     var u = $('#srv').value.trim();
     if (!URL_OK.test(u)) { $('#loginErr').textContent = 'Isi alamat server dengan benar (dari pengelola)'; return; }
@@ -2561,15 +2602,40 @@ async function doLogin() {
   }
   var b = $('#btnLogin'); b.disabled = true; b.textContent = 'Memeriksa…'; $('#loginErr').textContent = '';
   try {
-    var r = await api('wa_login', pin);
+    var r = await api('wa_login', cred);
     if (!r.ok) { $('#loginErr').textContent = r.error || 'Gagal masuk'; return; }
-    S.pin = pin; S.role = r.role; S.nama = r.nama || S.nama; S.investor = r.investor || ''; S.inv = null; S.invPilih = '';
+    S.pin = cred; S.role = r.role; S.nama = r.nama || S.nama; S.investor = r.investor || ''; S.inv = null; S.invPilih = '';
+    S.me = { user: r.user || '', orang: r.orang || '', adaAkun: !!r.adaAkun };
     S.tab = r.role === 'investor' ? 'inv' : 'home';
     if (!$('#remember').checked) store.del('qf_session');
     startApp(true);
   } catch (e) {
     $('#loginErr').textContent = 'Tidak bisa terhubung. Periksa sinyal lalu coba lagi.';
   } finally { b.disabled = false; b.textContent = 'Masuk'; }
+}
+/* ---------------- daftar akun baru ---------------- */
+function showLoginBox(daftar) { $('#loginBox').hidden = !!daftar; $('#signupBox').hidden = !daftar; $('#signupMsg').textContent = ''; $('#signupMsg').className = 'err'; }
+async function doSignup() {
+  var m = $('#signupMsg'); m.className = 'err';
+  var nama = $('#su-nama').value.trim(), usr = $('#su-usr').value.trim().toLowerCase(), pw = $('#su-pw').value, pw2 = $('#su-pw2').value;
+  if (nama.length < 2) { m.textContent = 'Isi nama lengkap'; return; }
+  if (!/^[a-z0-9._-]{3,20}$/.test(usr)) { m.textContent = 'Nama pengguna: huruf kecil/angka/titik/strip, 3-20 karakter'; return; }
+  if (pw.length < 6) { m.textContent = 'Kata sandi minimal 6 karakter'; return; }
+  if (pw !== pw2) { m.textContent = 'Kata sandi tidak sama'; return; }
+  if (needServer()) {
+    var u = $('#srv').value.trim();
+    if (!URL_OK.test(u)) { m.textContent = 'Isi alamat server dengan benar (dari pengelola)'; return; }
+    API_URL = u; store.set('qf_api', u);
+  }
+  var b = $('#btnSignup'); b.disabled = true; b.textContent = 'Mengirim…'; m.textContent = '';
+  try {
+    var r = await api('wa_daftar', nama, usr, pw);
+    if (!r.ok) { m.textContent = r.error || 'Gagal mendaftar'; return; }
+    m.className = 'err ok-msg'; m.textContent = r.pesan || 'Pendaftaran terkirim';
+    $('#usr').value = usr; $('#su-pw').value = ''; $('#su-pw2').value = '';
+    setTimeout(function () { showLoginBox(false); $('#loginErr').textContent = 'Pendaftaran terkirim. Tunggu persetujuan pengelola, lalu masuk.'; $('#loginErr').className = 'err ok-msg'; }, 1800);
+  } catch (e) { m.textContent = 'Tidak bisa terhubung. Periksa sinyal lalu coba lagi.'; }
+  finally { b.disabled = false; b.textContent = 'Kirim pendaftaran'; }
 }
 
 function startApp(fresh) {
@@ -2600,7 +2666,7 @@ function setupNav() {
 }
 async function loadInv() {
   var r = await api('wa_inv_ringkas', S.pin, S.role === 'admin' ? S.invPilih : '');
-  if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi dengan PIN baru.'); return false; }
+  if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return false; }
   if (!r.ok) { toast(r.error || 'Gagal memuat portofolio', 'err'); return false; }
   if (r.investors) S.invList = r.investors;
   S.inv = r.portofolio ? r : null;
@@ -2615,6 +2681,7 @@ function prefetchTabs() {
   setTimeout(function () {
     try { if (S.role === 'admin' && !S.rek) loadRekap(false); } catch (e) { /* abaikan */ }
     try { if (!S.lap) loadLap(); } catch (e) { /* abaikan */ }
+    try { if (S.role === 'admin') api('wa_pengguna', S.pin, 'daftar', {}).then(function (r) { if (r && r.ok) { S.akun = r.akun; S.akunMenunggu = r.akun.filter(function (x) { return x.status === 'menunggu'; }).length; renderHome(); } }).catch(function () { /* abaikan */ }); } catch (e) { /* abaikan */ }
   }, 400);
 }
 async function refreshAll() {
@@ -2630,7 +2697,7 @@ async function refreshAll() {
     var res = await Promise.all([api('wa_ringkas', S.pin), api('wa_domba', S.pin)]);
     var r = res[0], d = res[1];
     if (!r.ok || !d.ok) {
-      if (r.pinSalah || d.pinSalah) { logout('PIN sudah berubah. Masuk lagi dengan PIN baru.'); return; }
+      if (r.pinSalah || d.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
       toast((r.error || d.error || 'Gagal memuat data'), 'err'); setSync('offline'); return;
     }
     S.role = r.role; S.ringkas = r; S.domba = d.domba; S.lists = d.lists; S.ts = Date.now();
@@ -2647,7 +2714,8 @@ function renderHome() {
   var r = S.ringkas, el = $('#s-home');
   if (!r) { el.innerHTML = '<p class="muted">Memuat data…</p>'; return; }
   var d = r.domba, p = r.perf, h = '';
-  h += '<div class="muted small" style="margin:2px 2px 8px">Per tanggal ' + esc(r.laporan) + '</div>';
+  h += '<div class="muted small" style="margin:2px 2px 8px">Per tanggal ' + esc(r.laporan) + (S.me && S.me.orang ? ' · masuk sebagai ' + esc(S.me.orang) : '') + '</div>';
+  if (S.role === 'admin' && S.akunMenunggu) h += '<div class="card" style="border-color:#e9762b"><b>' + S.akunMenunggu + ' permintaan akun baru</b><div class="muted small">Ada orang yang mendaftar dan menunggu persetujuan Anda.</div><button class="btn" type="button" data-pengguna="1" style="margin-top:8px">Tinjau permintaan</button></div>';
   h += '<div class="grid2">';
   h += '<div class="kpi big"><div class="v">' + esc(d.aktif) + '</div><div class="l">Domba aktif (dari ' + esc(d.total) + ' tercatat)</div></div>';
   h += '<div class="kpi"><div class="v">' + esc(d.sehat) + '</div><div class="l">Sehat</div></div>';
@@ -2673,6 +2741,7 @@ function renderHome() {
       '<div class="row"><span>Proyeksi profit akhir siklus</span><b class="' + (k.proyeksi < 0 ? 'neg' : 'pos') + '">' + rp(k.proyeksi) + '</b></div></div>';
   }
   el.innerHTML = h;
+  $$('[data-pengguna]', el).forEach(function (b) { b.addEventListener('click', akunPengguna); });
   $$('[data-kdm]', el).forEach(function (b) { b.addEventListener('click', function () { S.kdm = b.getAttribute('data-kdm'); renderHome(); }); });
 }
 /** Grafik rata-rata per kandang (domba aktif): pilih Bobot / Kenaikan harian / Jumlah. Warna per blok. */
@@ -2817,6 +2886,8 @@ function renderSesi(k) {
 }
 
 var ICP = {
+  user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5"/>',
+  swap: '<path d="M7 7h12"/><path d="m16 3 4 4-4 4"/><path d="M17 17H5"/><path d="m8 13-4 4 4 4"/>',
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/>',
   tag: '<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.6" cy="7.6" r="1.2"/>',
   sprout: '<path d="M7 20h10"/><path d="M12 20v-9"/><path d="M12 11c0-3.2-2.2-5-6-5 0 3.2 2.2 5 6 5z"/><path d="M12 13c0-3 2-5 6-5 0 3-2 5-6 5z"/>',
@@ -2908,6 +2979,7 @@ function addItems(kind) {
   }
   if (kind === 'keu') {
     L.push({ g: 'Lihat' }, { id: 'keu.dash', ic: 'trend', t: 'Dashboard', s: 'Posisi kas, aset, prediksi, arus kas', go: ['keu', 'dash'] },
+      { id: 'keu.mut', ic: 'swap', t: 'Mutasi', s: 'Uang masuk dan keluar per bulan, beserta penginputnya', go: ['keu', 'mut'] },
       { id: 'keu.lap', ic: 'chart', t: 'Laporan keuangan', s: 'Rekap bulanan, RAB, dan PDF WhatsApp', go: ['keu', 'lap'] },
       { g: 'Input' },
       { id: 'keu.input.catat', ic: 'wallet', t: 'Catat kas', s: 'Pemasukan atau pengeluaran', go: ['keu', 'input', 'catat'] },
@@ -2961,7 +3033,7 @@ function initAdd() {
 /* ---------------- menu samping (drawer) ---------------- */
 var DOPEN = {};
 function drwTree() {
-  if (S.role === 'investor') return [{ id: 'inv', e: 'case', l: 'Portofolio', go: ['inv'] }];
+  if (S.role === 'investor') return [{ id: 'inv', e: 'case', l: 'Portofolio', go: ['inv'] }, { id: 'akun', e: 'user', l: 'Akun saya', fn: 'akun' }];
   var kd = [['beranda', 'Tugas'], ['pakan', 'Pemberian Pakan'], ['peta', 'Peta Kandang'], ['catat', 'Timbang & Stok'], ['stok', 'Stok Pakan'], ['silase', 'Silase'], ['analisis', 'Analisis'], ['grafik', 'Grafik & Simulasi'], ['mitigasi', 'Mitigasi'], ['ransum', 'Ransum']];
   var inp = [['timbang', 'Timbang'], ['kondisi', 'Kondisi'], ['media', 'Foto & video'], ['massal', 'Timbang massal'], ['pakan', 'Stok pakan']];
   var T = [{ id: 'home', e: 'home', l: 'Beranda', go: ['home'] }, { id: 'domba', e: 'tag', l: 'Domba', go: ['domba'] },
@@ -2972,10 +3044,13 @@ function drwTree() {
   if (S.role === 'admin') {
     T.push({ id: 'keu', e: 'wallet', l: 'Keuangan', kids: [
       { id: 'keu.dash', e: 'trend', l: 'Dashboard', go: ['keu', 'dash'] },
+      { id: 'keu.mut', e: 'swap', l: 'Mutasi', go: ['keu', 'mut'] },
       { id: 'keu.lap', e: 'chart', l: 'Laporan keuangan', go: ['keu', 'lap'] },
       { id: 'keu.input', e: 'pencil', l: 'Input', kids: [['catat', 'Catat kas'], ['inv', 'Invoice'], ['kw', 'Kuitansi'], ['pel', 'Pelanggan']].map(function (x) { return { id: 'keu.input.' + x[0], l: x[1], go: ['keu', 'input', x[0]] }; }) }] });
     T.push({ id: 'inv', e: 'case', l: 'Investor', go: ['inv'] });
+    T.push({ id: 'pengguna', e: 'user', l: 'Pengguna', badge: S.akunMenunggu || 0, fn: 'pengguna' });
   }
+  T.push({ id: 'akun', e: 'user', l: 'Akun saya', fn: 'akun' });
   return T;
 }
 function drwActive() {
@@ -3003,12 +3078,12 @@ function drwRender() {
   for (var i = 1; i <= parts.length; i++) DOPEN[parts.slice(0, i).join('.')] = DOPEN[parts.slice(0, i).join('.')] !== false;
   function node(n, lv) {
     var on = n.id === act, has = !!n.kids, open = has && DOPEN[n.id];
-    var h = '<button type="button" class="drw-i lv' + lv + (on ? ' on' : '') + (has && act.indexOf(n.id + '.') === 0 ? ' in' : '') + '" data-d="' + n.id + '">' + (n.e ? '<span class="e">' + ico(n.e) + '</span>' : '<span class="e dot"></span>') + '<span class="l">' + esc(n.l) + '</span>' + (has ? '<span class="chev' + (open ? ' o' : '') + '">▾</span>' : '') + '</button>';
+    var h = '<button type="button" class="drw-i lv' + lv + (on ? ' on' : '') + (has && act.indexOf(n.id + '.') === 0 ? ' in' : '') + '" data-d="' + n.id + '">' + (n.e ? '<span class="e">' + ico(n.e) + '</span>' : '<span class="e dot"></span>') + '<span class="l">' + esc(n.l) + '</span>' + (n.badge ? '<span class="chip" style="background:#e9762b;color:#fff;margin-left:6px">' + n.badge + '</span>' : '') + (has ? '<span class="chev' + (open ? ' o' : '') + '">▾</span>' : '') + '</button>';
     if (has) h += '<div class="drw-k' + (open ? ' o' : '') + '">' + n.kids.map(function (k) { return node(k, lv + 1); }).join('') + '</div>';
     return h;
   }
   $('#drwB').innerHTML = drwTree().map(function (n) { return node(n, 0); }).join('');
-  $('#drwU').textContent = S.role === 'admin' ? 'Pengelola' : S.role === 'investor' ? 'Investor' : 'Staf';
+  $('#drwU').textContent = (S.me && S.me.orang ? S.me.orang + ' · ' : '') + (S.role === 'admin' ? 'Pengelola' : S.role === 'investor' ? 'Investor' : 'Staf');
 }
 function drwOpen() {
   drwRender(); $$('[data-logo]').forEach(function (i) { i.src = LOGO; });
@@ -3038,6 +3113,7 @@ function initDrawer() {
     var b = e.target.closest('[data-d]'); if (!b) return;
     var n = drwFindNode(drwTree(), b.getAttribute('data-d')); if (!n) return;
     if (n.kids) { DOPEN[n.id] = !DOPEN[n.id]; drwRender(); return; }
+    if (n.fn) { drwClose(); if (n.fn === 'pengguna') akunPengguna(); else showMenu(); return; }
     drwGo(n.go);
   });
   var x0 = null, y0 = 0;
@@ -3068,8 +3144,8 @@ function go(tab, sub) {
     sec = sub === 'kandang' ? 'kandang' : sub === 'input' ? 'input' : 'lap';
   } else if (tab === 'keu') {
     sub = sub || S.sub.keu; S.sub.keu = sub;
-    sec = sub === 'input' ? 'keu' : 'lap';
-    if (sub !== 'input') { S.lapTab = 'keu'; S.rekSub = sub === 'dash' ? 'dash' : (S.rekSub === 'dash' ? 'rekap' : S.rekSub); }
+    sec = sub === 'input' ? 'keu' : sub === 'mut' ? 'mut' : 'lap';
+    if (sub !== 'input' && sub !== 'mut') { S.lapTab = 'keu'; S.rekSub = sub === 'dash' ? 'dash' : (S.rekSub === 'dash' ? 'rekap' : S.rekSub); }
   } else sub = '';
   S.tab = tab;
   renderGbar(tab);
@@ -3078,7 +3154,8 @@ function go(tab, sub) {
   if (tab === 'inv') { renderInv(); if (S.role === 'admin' && !S.inv && !S.invRekap && !S.invPilih) { loadInv().then(function (ok) { if (ok) renderInv(); }).catch(function () { /* offline */ }); } }
   if (sec === 'lap') { renderLap(); if (tab === 'prod') loadLap(); }
   if (sec === 'keu') loadDok();
-  ['home', 'domba', 'input', 'keu', 'inv', 'lap', 'kandang'].forEach(function (t) { $('#s-' + t).hidden = t !== sec; });
+  if (sec === 'mut') { renderMut(); loadMut(); }
+  ['home', 'domba', 'input', 'keu', 'inv', 'lap', 'kandang', 'mut'].forEach(function (t) { $('#s-' + t).hidden = t !== sec; });
   $$('#nav button').forEach(function (b) { b.classList.toggle('on', b.getAttribute('data-tab') === tab); });
   if (sec === 'kandang') { $('#s-kandang').classList.remove('kd-inputonly'); KDL.show(); }
   if (tab === 'prod' && sub === 'input') showInputSub(S.itab || 'timbang');
@@ -3164,7 +3241,7 @@ async function kirim(jenis, payload, label, uidOpt, senyap) {
   var uid = uidOpt || uuid();
   try {
     var r = await api('wa_simpan', S.pin, jenis, payload, uid);
-    if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi.'); return { ok: false }; }
+    if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return { ok: false }; }
     if (!r.ok) {
       if (r.retry) { qAdd({ uid: uid, jenis: jenis, payload: payload, label: label, ts: Date.now(), tries: 1 }); toast('Server sibuk. Data disimpan di HP dan dikirim ulang otomatis.', 'warn'); return { ok: true, queued: true }; }
       toast(r.error || 'Gagal menyimpan', 'err'); return { ok: false };
@@ -3572,7 +3649,7 @@ async function loadDok(force) {
   if (!force && S.dok && Date.now() - S.dokTs < 20000) { renderDokLists(); return; }
   try {
     var r = await api('wa_dok_awal', S.pin);
-    if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi.'); return; }
+    if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
     if (!r.ok) { toast(r.error || 'Gagal memuat dokumen', 'err'); return; }
     S.dok = r; S.dokTs = Date.now(); renderDokLists();
   } catch (e) { var l = $('#iv-list'); if (l && !S.dok) l.innerHTML = '<p class="muted small">Tidak ada sinyal. Invoice dan kuitansi butuh koneksi.</p>'; }
@@ -3688,7 +3765,7 @@ async function kirimDok(jenis, payload, form, label) {
   busy(form, true, label);
   try {
     var r = await api('wa_simpan', S.pin, jenis, payload, uuid());
-    if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi.'); return null; }
+    if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return null; }
     if (!r.ok) { toast(r.retry ? 'Server sibuk, coba lagi sebentar' : (r.error || 'Gagal menyimpan'), 'err'); return null; }
     if (r.peringatan) toast(r.peringatan, 'warn');
     return r;
@@ -4176,7 +4253,7 @@ async function loadRekap(force) {
   var box = $('#rek-body'); if (box && !S.rek) box.innerHTML = '<p class="muted small">Memuat…</p>';
   try {
     var r = await api('wa_keu_rekap', S.pin);
-    if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi.'); return; }
+    if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
     if (!r.ok) { toast(r.error || 'Gagal memuat rekap', 'err'); return; }
     S.rek = r; S.rekTs = Date.now(); renderRekap();
   } catch (e) { if (box && !S.rek) box.innerHTML = '<p class="muted small">Tidak ada sinyal. Rekap keuangan butuh koneksi.</p>'; }
@@ -4193,7 +4270,7 @@ async function loadLap() {
   if (S.role === 'investor') return;
   try {
     var r = await api('wa_laporan', S.pin);
-    if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi.'); return; }
+    if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
     if (!r.ok) { toast(r.error || 'Gagal memuat laporan', 'err'); return; }
     S.lap = r; renderLap();
     if ($('#remember').checked || store.get('qf_session')) saveSession();
@@ -4667,7 +4744,7 @@ async function flushQueue(manual) {
       var r;
       try { r = await api('wa_simpan', S.pin, it.jenis, it.payload, it.uid); }
       catch (e) { it.tries++; qSet(q); offline = true; break; }
-      if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi, data antrian tetap tersimpan.'); break; }
+      if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi, data antrian tetap tersimpan.'); break; }
       if (r.ok) { q.shift(); sent++; qSet(q); }
       else if (r.retry) { it.tries++; qSet(q); break; }
       else { q.shift(); qSet(q); toast('Data ditolak: ' + it.label + '\n' + (r.error || ''), 'err'); }
@@ -4702,19 +4779,148 @@ async function openDetail(tag) {
 }
 
 function showMenu() {
-  var n = qGet().length;
-  showSheet('<h3>Menu</h3><div class="row"><span>Peran</span><b>' + (S.role === 'admin' ? 'Pengelola' : S.role === 'investor' ? 'Investor' : 'Staf') + '</b></div>' +
+  var n = qGet().length, me = S.me || {}, adm = S.role === 'admin';
+  showSheet('<h3>Akun & menu</h3>' +
+    '<div class="row"><span>Masuk sebagai</span><b>' + esc(me.orang || (me.user ? me.user : 'PIN lama')) + '</b></div>' +
+    (me.user ? '<div class="row"><span>Nama pengguna</span><b>' + esc(me.user) + '</b></div>' : '') +
+    '<div class="row"><span>Peran</span><b>' + (S.role === 'admin' ? 'Pengelola' : S.role === 'investor' ? 'Investor' : 'Staf') + '</b></div>' +
     '<div class="row"><span>Data terakhir</span><b>' + (S.ts ? jam(S.ts) : '-') + '</b></div>' +
     '<div class="row"><span>Antrian kirim</span><b>' + n + '</b></div>' +
-    (inAppsScript() || isStandalone() ? '' : (deferredPrompt ? '<button class="btn" type="button" id="mInst">📲 Pasang aplikasi di HP</button>' :
+    (inAppsScript() || isStandalone() ? '' : (deferredPrompt ? '<button class="btn" type="button" id="mInst">Pasang aplikasi di HP</button>' :
       '<p class="muted small" style="margin-top:12px">Untuk memasang: Android (Chrome) menu ⋮ &gt; Instal aplikasi / Tambahkan ke layar utama. iPhone (Safari): tombol Bagikan &gt; Tambahkan ke Layar Utama.</p>')) +
+    (me.user ? '<button class="btn ghost" type="button" id="mSandi">Ganti kata sandi</button>' : '') +
+    (adm ? '<button class="btn ghost" type="button" id="mUser">Kelola pengguna' + (S.akunMenunggu ? ' (' + S.akunMenunggu + ' menunggu)' : '') + '</button>' : '') +
     '<button class="btn ghost" type="button" id="mQ">Lihat antrian</button><button class="btn" type="button" id="mOut" style="background:#9c0006">Keluar</button>');
   var mi = $('#mInst'); if (mi) mi.addEventListener('click', function () { deferredPrompt.prompt(); deferredPrompt = null; closeSheet(); });
+  var ms = $('#mSandi'); if (ms) ms.addEventListener('click', akunSandi);
+  var mu = $('#mUser'); if (mu) mu.addEventListener('click', akunPengguna);
   $('#mQ').addEventListener('click', showQueue);
   $('#mOut').addEventListener('click', function () {
     if (qGet().length && !confirm('Masih ada data antrian yang belum terkirim. Keluar tetap menyimpannya di HP ini. Lanjut keluar?')) return;
     closeSheet(); logout('');
   });
+}
+/* ---------------- akun: ganti sandi & kelola pengguna ---------------- */
+function akunSandi() {
+  showSheet('<h3>Ganti kata sandi</h3><div class="acc-f"><label>Kata sandi sekarang</label><input type="password" id="gs-lama" autocomplete="current-password">' +
+    '<label>Kata sandi baru (min. 6 karakter)</label><input type="password" id="gs-baru" autocomplete="new-password"><label>Ulangi kata sandi baru</label><input type="password" id="gs-baru2" autocomplete="new-password"></div>' +
+    '<button class="btn" type="button" id="gs-ok" style="margin-top:12px">Simpan</button><div id="gs-msg" class="err"></div>');
+  $('#gs-ok').addEventListener('click', async function () {
+    var l = $('#gs-lama').value, b1 = $('#gs-baru').value, b2 = $('#gs-baru2').value, m = $('#gs-msg');
+    if (b1.length < 6) { m.textContent = 'Kata sandi baru minimal 6 karakter'; return; }
+    if (b1 !== b2) { m.textContent = 'Kata sandi baru tidak sama'; return; }
+    try {
+      var r = await api('wa_pengguna', S.pin, 'gantiSandi', { lama: l, baru: b1 });
+      if (!r.ok) { m.textContent = r.error || 'Gagal'; return; }
+      closeSheet(); logout('Kata sandi diganti. Masuk lagi dengan sandi baru.');
+    } catch (e) { m.textContent = 'Tidak ada sinyal'; }
+  });
+}
+var AKUN_PERAN = { admin: 'Pengelola', staf: 'Staf' };
+function renderAkun() {
+  var L = S.akun || [], me = S.me || {}, h = '<h3>Pengguna</h3>';
+  if (!me.user) h += '<div class="card" style="margin:6px 0;padding:10px 12px;font-size:13px">Anda masuk dengan PIN lama. <b>Buat akun admin untuk diri sendiri</b> di bawah. Begitu akun admin pertama dibuat, PIN pengelola/staf lama tidak berlaku lagi dan Anda diminta masuk dengan akun baru.</div>';
+  var btn = function (a, u, t, c) { return '<button type="button" data-ak="' + a + '" data-u="' + esc(u) + '" class="' + (c || '') + '">' + t + '</button>'; };
+  var rowH = function (x, tombol) {
+    return '<div class="acc-r"><div class="n"><b>' + esc(x.nama) + (x.user === me.user ? ' (Anda)' : '') + '</b><span>@' + esc(x.user) + ' · ' + AKUN_PERAN[x.role] + '</span><div class="acc-b">' + tombol + '</div>' +
+      '<div class="acc-f" id="rs-' + esc(x.user) + '" hidden><label>Kata sandi baru</label><input type="text" autocomplete="off" id="rsi-' + esc(x.user) + '"><div class="acc-b">' + btn('resetgo', x.user, 'Simpan sandi', 'pri') + '</div></div></div></div>';
+  };
+  var mn = L.filter(function (x) { return x.status === 'menunggu'; }), ak = L.filter(function (x) { return x.status === 'aktif'; }), nn = L.filter(function (x) { return x.status === 'nonaktif'; });
+  if (mn.length) { h += '<div class="acc-h">Permintaan baru (' + mn.length + ')</div>'; mn.forEach(function (x) { h += rowH(x, btn('setujui-staf', x.user, 'Setujui sebagai staf', 'pri') + btn('setujui-admin', x.user, 'Setujui sebagai pengelola') + btn('tolak', x.user, 'Tolak', 'bad')); }); }
+  h += '<div class="acc-h">Aktif (' + ak.length + ')</div>';
+  if (!ak.length) h += '<p class="muted small">Belum ada akun. Buat di bawah.</p>';
+  ak.forEach(function (x) { h += rowH(x, btn('peran', x.user, x.role === 'admin' ? 'Jadikan staf' : 'Jadikan pengelola') + btn('reset', x.user, 'Reset sandi') + (x.user === me.user ? '' : btn('nonaktif', x.user, 'Nonaktifkan', 'bad'))); });
+  if (nn.length) { h += '<div class="acc-h">Nonaktif</div>'; nn.forEach(function (x) { h += rowH(x, btn('aktif', x.user, 'Aktifkan', 'pri') + btn('hapus', x.user, 'Hapus', 'bad')); }); }
+  var adaAdm = L.some(function (x) { return x.role === 'admin' && x.status === 'aktif'; });
+  h += '<div class="acc-h">Tambah pengguna</div><div class="acc-f"><label>Nama lengkap</label><input type="text" id="ap-nama" maxlength="24"><label>Nama pengguna (huruf kecil/angka)</label><input type="text" id="ap-usr" autocapitalize="off" maxlength="20">' +
+    '<label>Kata sandi (min. 6 karakter)</label><input type="text" id="ap-pw" autocomplete="off"><label>Peran</label><select id="ap-role"><option value="staf"' + (adaAdm ? ' selected' : '') + '>Staf (produksi + foto, tanpa keuangan)</option><option value="admin"' + (adaAdm ? '' : ' selected') + '>Pengelola (semua fitur)</option></select></div>' +
+    '<button class="btn" type="button" id="ap-add" style="margin-top:12px">Tambah</button><div id="ak-msg" class="err"></div>';
+  $('#sheetBody').innerHTML = h;
+}
+async function akunAksi(aksi, p) {
+  var m = $('#ak-msg');
+  try {
+    var r = await api('wa_pengguna', S.pin, aksi, p || {});
+    if (r.pinSalah) { closeSheet(); logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
+    if (!r.ok) { if (m) m.textContent = r.error || 'Gagal'; else toast(r.error || 'Gagal', 'err'); return; }
+    S.akun = r.akun; S.akunMenunggu = r.akun.filter(function (x) { return x.status === 'menunggu'; }).length;
+    if (r.legacyMati && S.me && !S.me.user) { closeSheet(); logout('Akun admin dibuat. PIN lama tidak berlaku lagi. Masuk dengan nama pengguna dan kata sandi yang baru.'); return; }
+    renderAkun(); toast(r.pesan || 'Tersimpan', 'ok'); renderHome(); try { drwRender(); } catch (e) { /* abaikan */ }
+  } catch (e) { if (m) m.textContent = 'Tidak ada sinyal'; }
+}
+async function akunPengguna() {
+  if (S.role !== 'admin') return;
+  showSheet('<h3>Pengguna</h3><p class="muted small">Memuat…</p>');
+  var r; try { r = await api('wa_pengguna', S.pin, 'daftar', {}); } catch (e) { showSheet('<h3>Pengguna</h3><p class="muted small">Tidak ada sinyal.</p>'); return; }
+  if (!r.ok) { showSheet('<h3>Pengguna</h3><p class="neg small">' + esc(r.error || 'Gagal') + '</p>'); return; }
+  S.akun = r.akun; S.akunMenunggu = r.akun.filter(function (x) { return x.status === 'menunggu'; }).length; renderAkun(); renderHome();
+}
+function akunSiap() {
+  $('#sheetBody').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-ak]'); if (b) {
+      var a = b.getAttribute('data-ak'), u = b.getAttribute('data-u');
+      if (a === 'reset') { var f = $('#rs-' + u); if (f) f.hidden = !f.hidden; return; }
+      if (a === 'resetgo') { var v = $('#rsi-' + u).value; if (v.length < 6) { $('#ak-msg').textContent = 'Kata sandi minimal 6 karakter'; return; } akunAksi('reset', { user: u, sandi: v }); return; }
+      if (a === 'setujui-staf') return akunAksi('setujui', { user: u, role: 'staf' });
+      if (a === 'setujui-admin') return akunAksi('setujui', { user: u, role: 'admin' });
+      if (a === 'peran') { var x = (S.akun || []).filter(function (q) { return q.user === u; })[0]; return akunAksi('peran', { user: u, role: x && x.role === 'admin' ? 'staf' : 'admin' }); }
+      if ((a === 'hapus' || a === 'tolak' || a === 'nonaktif') && !confirm(a === 'hapus' ? 'Hapus akun ini permanen?' : a === 'tolak' ? 'Tolak permintaan ini?' : 'Nonaktifkan akun ini? Orangnya tidak bisa masuk lagi.')) return;
+      akunAksi(a, { user: u }); return;
+    }
+    if (e.target.id === 'ap-add') {
+      var nama = $('#ap-nama').value.trim(), usr = $('#ap-usr').value.trim().toLowerCase(), pw = $('#ap-pw').value, role = $('#ap-role').value, m = $('#ak-msg');
+      if (nama.length < 2) { m.textContent = 'Isi nama lengkap'; return; }
+      if (!/^[a-z0-9._-]{3,20}$/.test(usr)) { m.textContent = 'Nama pengguna: huruf kecil/angka/titik/strip, 3-20 karakter'; return; }
+      if (pw.length < 6) { m.textContent = 'Kata sandi minimal 6 karakter'; return; }
+      if (role === 'admin' && S.me && !S.me.user && !confirm('Setelah akun admin ini dibuat, PIN lama tidak berlaku dan Anda harus masuk dengan akun baru. Lanjut?')) return;
+      akunAksi('tambah', { nama: nama, user: usr, sandi: pw, role: role });
+    }
+  });
+}
+
+/* ---------------- Keuangan > Mutasi (uang masuk/keluar per bulan + penginput) ---------------- */
+var BLN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
+function bulanLabel(ym) { var m = /^(\d{4})-(\d{2})$/.exec(ym || ''); return m ? BLN[Number(m[2]) - 1] + ' ' + m[1] : ym; }
+function tglPendek(iso) { var p = String(iso).split('-'); return p.length === 3 ? Number(p[2]) + ' ' + BLN[Number(p[1]) - 1].slice(0, 3) + ' ' + p[0] : iso; }
+function loadMut(bulan) {
+  if (S.role !== 'admin') return;
+  var box = $('#s-mut');
+  api('wa_keu_mutasi', S.pin, bulan || S.mutBulan || '').then(function (r) {
+    if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
+    if (!r.ok) { toast(r.error || 'Gagal memuat mutasi', 'err'); return; }
+    S.mut = r; S.mutBulan = r.bulan; renderMut();
+  }).catch(function () { if (!S.mut) box.innerHTML = '<p class="muted small" style="padding:6px">Tidak ada sinyal. Mutasi butuh koneksi.</p>'; });
+}
+function renderMut() {
+  var box = $('#s-mut'), r = S.mut;
+  if (!r) { box.innerHTML = '<p class="muted small" style="padding:6px">Memuat mutasi…</p>'; return; }
+  var fl = S.mutF || 'semua', oleh = S.mutOleh || '';
+  var orang = []; r.rows.forEach(function (t) { if (orang.indexOf(t.oleh) < 0) orang.push(t.oleh); });
+  var rows = r.rows.filter(function (t) { return (fl === 'semua' || (fl === 'masuk' && t.masuk > 0) || (fl === 'keluar' && t.keluar > 0)) && (!oleh || t.oleh === oleh); });
+  var h = '<div class="mut-f"><select id="mut-b" aria-label="Bulan">' + (r.daftarBulan.some(function (b) { return b.b === r.bulan; }) ? '' : '<option value="' + r.bulan + '" selected>' + bulanLabel(r.bulan) + '</option>') +
+    r.daftarBulan.map(function (b) { return '<option value="' + b.b + '"' + (b.b === r.bulan ? ' selected' : '') + '>' + bulanLabel(b.b) + ' (' + b.n + ')</option>'; }).join('') + '</select></div>' +
+    '<div class="mut-sum"><div><span>Saldo awal</span><b>' + rp(r.saldoAwal) + '</b></div><div><span>Saldo akhir</span><b>' + rp(r.saldoAkhir) + '</b></div>' +
+    '<div><span>Uang masuk</span><b class="pos">+ ' + rp(r.masuk) + '</b></div><div><span>Uang keluar</span><b class="neg">− ' + rp(r.keluar) + '</b></div></div>' +
+    '<div class="mut-f">' + [['semua', 'Semua'], ['masuk', 'Masuk'], ['keluar', 'Keluar']].map(function (x) { return '<button type="button" data-mf="' + x[0] + '" class="' + (fl === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') +
+    (orang.length > 1 ? '<select id="mut-o" aria-label="Penginput"><option value="">Semua penginput</option>' + orang.map(function (o) { return '<option value="' + esc(o) + '"' + (o === oleh ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>' : '') + '</div>';
+  if (!rows.length) h += '<p class="muted small" style="padding:10px 4px">' + (r.n ? 'Tidak ada transaksi untuk filter ini.' : 'Belum ada transaksi di bulan ini.') + '</p>';
+  var last = '';
+  rows.forEach(function (t) {
+    if (t.d !== last) { last = t.d; h += '<div class="mut-d">' + tglPendek(t.d) + '</div>'; }
+    h += '<div class="mut-t"><div class="l"><b>' + esc(t.kat) + '</b>' + (t.ket ? '<span>' + esc(t.ket) + '</span>' : '') +
+      '<span>' + [t.metode, t.pemilik, t.ref].filter(Boolean).map(esc).join(' · ') + '</span><span class="by">oleh ' + esc(t.oleh) + '</span></div>' +
+      '<div class="r"><b class="' + (t.masuk > 0 ? 'pos' : 'neg') + '">' + (t.masuk > 0 ? '+ ' + rp(t.masuk) : '− ' + rp(t.keluar)) + '</b><span>Saldo ' + rp(t.saldo) + '</span></div></div>';
+  });
+  h += '<p class="muted small" style="margin:12px 4px">Saldo dihitung kumulatif dari catatan pertama di Keu_Input, belum termasuk modal atau saldo awal rekening. Penginput berasal dari akun yang dipakai saat mencatat; catatan lama atau yang diketik langsung di Sheets tampil tanpa nama.</p>';
+  box.innerHTML = h;
+}
+function mutSiap() {
+  var box = $('#s-mut');
+  box.addEventListener('change', function (e) {
+    if (e.target.id === 'mut-b') { S.mutOleh = ''; S.mutBulan = e.target.value; loadMut(e.target.value); }
+    if (e.target.id === 'mut-o') { S.mutOleh = e.target.value; renderMut(); }
+  });
+  box.addEventListener('click', function (e) { var b = e.target.closest('[data-mf]'); if (b) { S.mutF = b.getAttribute('data-mf'); renderMut(); } });
 }
 
 /* ---------------- event ---------------- */
@@ -4729,6 +4935,12 @@ document.addEventListener('DOMContentLoaded', function () {
   initDrawer();
   $('#btnLogin').addEventListener('click', doLogin);
   $('#pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+  $('#usr').addEventListener('keydown', function (e) { if (e.key === 'Enter') $('#pin').focus(); });
+  $('#goSignup').addEventListener('click', function () { showLoginBox(true); });
+  $('#goLogin').addEventListener('click', function () { showLoginBox(false); });
+  $('#btnSignup').addEventListener('click', doSignup);
+  $('#su-pw2').addEventListener('keydown', function (e) { if (e.key === 'Enter') doSignup(); });
+  akunSiap(); mutSiap();
   $('#nav').addEventListener('click', function (e) {
     var b = e.target.closest('button'), t = b && b.getAttribute('data-tab'); if (!t) return;
     if (!window.__qfDirectNav && S.role !== 'investor' && (t === 'prod' || t === 'keu' || t === 'domba')) { addOpen(t); return; }
@@ -4771,7 +4983,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var ses = loadSession();
   if (ses) {
-    S.pin = ses.pin; S.role = ses.role; S.nama = ses.nama || S.nama; S.investor = ses.investor || ''; S.inv = ses.inv || null; S.lap = ses.lap || null; S.invList = ses.invList || []; S.invPilih = ses.invPilih || ''; S.tab = ses.role === 'investor' ? 'inv' : 'home'; S.ringkas = ses.ringkas; S.domba = ses.domba; S.lists = ses.lists; S.ts = ses.ts || 0;
+    S.pin = ses.pin; S.me = ses.me || { user: '', orang: '', adaAkun: false }; S.role = ses.role; S.nama = ses.nama || S.nama; S.investor = ses.investor || ''; S.inv = ses.inv || null; S.lap = ses.lap || null; S.invList = ses.invList || []; S.invPilih = ses.invPilih || ''; S.tab = ses.role === 'investor' ? 'inv' : 'home'; S.ringkas = ses.ringkas; S.domba = ses.domba; S.lists = ses.lists; S.ts = ses.ts || 0;
     startApp(false); if (S.ringkas || S.inv) { setSync('offline'); if (S.ringkas) initLists(); }
   }
 });
