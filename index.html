@@ -2916,6 +2916,7 @@ function addItems(kind) {
       { id: 'keu.input.pel', ic: 'tag', t: 'Pelanggan', s: 'Daftar dan tambah pelanggan', go: ['keu', 'input', 'pel'] });
     return L;
   }
+  L.push({ g: 'Cepat' }, { ic: 'receipt', t: 'Tempel dari WhatsApp', s: 'Pesan WA jadi data: timbang, kondisi, pakan, kas', fn: 'wa' });
   L.push({ g: 'Produksi' },
     { ic: 'scale', t: 'Timbang', s: 'Catat bobot satu domba', go: ['prod', 'input', 'timbang'] },
     { ic: 'grid', t: 'Timbang massal', s: 'Satu kandang sekaligus', go: ['prod', 'input', 'massal'] },
@@ -2949,6 +2950,7 @@ function initAdd() {
     var b = e.target.closest('[data-ai]'); if (!b) return;
     var it = addItems(ADDKIND)[Number(b.getAttribute('data-ai'))]; if (!it) return;
     addClose();
+    if (it.fn === 'wa') { waOpen(); return; }
     if (it.act) { compound(function () { go('domba'); if (it.act[1] === 'cari') { setTimeout(function () { var q = $('#q'); if (q) q.focus(); }, 60); } else { S.filter = it.act[1]; renderDomba(); } }); return; }
     if (it.go) compound(function () { drwGo(it.go); });
   });
@@ -3158,8 +3160,8 @@ function numOK(v) { return isFinite(parseFloat(String(v).replace(',', '.'))); }
 function addSesi(k, text) { S.sesi[k].unshift(jam(Date.now()) + '  ' + text); renderSesi(k); }
 function busy(form, on, label) { var b = $('button[type=submit]', form); b.disabled = on; b.textContent = on ? 'Menyimpan…' : label; }
 
-async function kirim(jenis, payload, label) {
-  var uid = uuid();
+async function kirim(jenis, payload, label, uidOpt, senyap) {
+  var uid = uidOpt || uuid();
   try {
     var r = await api('wa_simpan', S.pin, jenis, payload, uid);
     if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi.'); return { ok: false }; }
@@ -3167,7 +3169,7 @@ async function kirim(jenis, payload, label) {
       if (r.retry) { qAdd({ uid: uid, jenis: jenis, payload: payload, label: label, ts: Date.now(), tries: 1 }); toast('Server sibuk. Data disimpan di HP dan dikirim ulang otomatis.', 'warn'); return { ok: true, queued: true }; }
       toast(r.error || 'Gagal menyimpan', 'err'); return { ok: false };
     }
-    toast('Tersimpan ✓ ' + (r.pesan || '') + (r.peringatan ? '\n' + r.peringatan : ''), r.peringatan ? 'warn' : 'ok');
+    if (!senyap) toast('Tersimpan ✓ ' + (r.pesan || '') + (r.peringatan ? '\n' + r.peringatan : ''), r.peringatan ? 'warn' : 'ok');
     return { ok: true, res: r };
   } catch (e) {
     qAdd({ uid: uid, jenis: jenis, payload: payload, label: label, ts: Date.now(), tries: 0 });
@@ -4310,6 +4312,247 @@ function renderLapProd(el) {
 function afterRefresh() {
   if (S.tab === 'prod' && S.sub.prod === 'lap') loadLap();
   if (S.tab === 'keu' && S.sub.keu === 'input' && S.role === 'admin') loadDok(true);
+}
+
+/* ================= Tempel dari WhatsApp: pesan teks -> data (pakan, kas, kondisi, timbang massal) ================= */
+//WAPARSE_BEGIN
+function waNorm(s) { return String(s || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function waCocok(teks, list) {
+  var q = waNorm(teks); if (!q || !list || !list.length) return null;
+  var ex = list.filter(function (x) { return waNorm(x) === q; }); if (ex.length === 1) return ex[0];
+  var sw = list.filter(function (x) { return waNorm(x).indexOf(q) === 0; }); if (sw.length === 1) return sw[0];
+  var ew = list.filter(function (x) { var n = waNorm(x); return q.length <= 3 && n.length > q.length && n.slice(-q.length) === q; }); if (ew.length === 1) return ew[0];
+  var ab = q.match(/^([a-z])(\d+)$/);
+  if (ab) { var ak = list.filter(function (x) { var n = waNorm(x), d = n.match(/(\d+)$/); return n.charAt(0) === ab[1] && d && d[1] === ab[2]; }); if (ak.length === 1) return ak[0]; }
+  var ct = list.filter(function (x) { return q.length >= 3 && waNorm(x).indexOf(q) >= 0; }); if (ct.length === 1) return ct[0];
+  return null;
+}
+function waCocokAwal(tok, start, list) {
+  for (var n = Math.min(4, tok.length - start); n >= 1; n--) {
+    var m = waCocok(tok.slice(start, start + n).join(' '), list);
+    if (m) return { nilai: m, n: n };
+  }
+  return null;
+}
+function waUang(t) {
+  t = String(t || '').toLowerCase().replace(/^rp\.?/, '').replace(/\s/g, ''); var m;
+  if ((m = t.match(/^(\d+(?:[.,]\d+)?)(jt|juta)$/))) return Math.round(parseFloat(m[1].replace(',', '.')) * 1e6);
+  if ((m = t.match(/^(\d+(?:[.,]\d+)?)(rb|ribu|k)$/))) return Math.round(parseFloat(m[1].replace(',', '.')) * 1e3);
+  if (/^\d{1,3}([.,]\d{3})+$/.test(t)) return parseInt(t.replace(/[.,]/g, ''), 10);
+  if (/^\d+$/.test(t)) return parseInt(t, 10);
+  if (/^\d+[.,]\d+$/.test(t)) return Math.round(parseFloat(t.replace(',', '.')));
+  return null;
+}
+function waBerat(t) { t = String(t || '').toLowerCase().replace(/kg$/, ''); if (!/^\d+([.,]\d+)?$/.test(t)) return null; return parseFloat(t.replace(',', '.')); }
+function waIso(y, m, d) { if (y < 100) y += 2000; var dt = new Date(y, m - 1, d); if (dt.getFullYear() !== y || dt.getMonth() !== m - 1 || dt.getDate() !== d) return null; return y + '-' + String(m).padStart(2, '0') + '-' + String(d).padStart(2, '0'); }
+function waGeser(iso, n) { var p = iso.split('-'); var dt = new Date(+p[0], +p[1] - 1, +p[2] + n); return waIso(dt.getFullYear(), dt.getMonth() + 1, dt.getDate()); }
+function waTgl(s, hariIni) {
+  s = String(s || '').trim().toLowerCase(); if (!s) return null;
+  if (/^(hari ?ini|today)$/.test(s)) return hariIni;
+  if (s === 'kemarin') return waGeser(hariIni, -1);
+  if (s === 'lusa' || s === 'kemarin lusa') return waGeser(hariIni, -2);
+  var m = s.match(/^(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?$/); if (!m) return null;
+  var y = m[3] ? parseInt(m[3], 10) : parseInt(hariIni.slice(0, 4), 10);
+  return waIso(y, parseInt(m[2], 10), parseInt(m[1], 10));
+}
+/** Buang awalan ekspor WhatsApp ("[26/10/2026 13.45] Nama:" atau "26/10/2026, 13.45 - Nama:"), ambil tanggalnya. */
+function waStrip(line) {
+  var m = line.match(/^\[?(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4}),?\s+\d{1,2}[.:]\d{2}(?::\d{2})?(?:\s?[ap]\.?m\.?)?\]?\s*(?:-\s*)?[^:\[\]]{1,40}:\s*/i);
+  if (m) return { text: line.slice(m[0].length), date: waIso(parseInt(m[3], 10), parseInt(m[2], 10), parseInt(m[1], 10)) };
+  m = line.match(/^\[\d{1,2}[.:]\d{2}(?::\d{2})?,?\s+(\d{1,2})[\/.](\d{1,2})[\/.](\d{2,4})\]\s*[^:\[\]]{1,40}:\s*/);
+  if (m) return { text: line.slice(m[0].length), date: waIso(parseInt(m[3], 10), parseInt(m[2], 10), parseInt(m[1], 10)) };
+  return { text: line, date: null };
+}
+var WA_STATUS = { sakit: 'Sakit', sehat: 'Sehat', jual: 'Terjual', terjual: 'Terjual', mati: 'Mati' };
+var WA_MASUK = { masuk: 1, beli: 1, datang: 1, tambah: 1 }, WA_KELUAR = { keluar: 1, pakai: 1, kasih: 1, ambil: 1 };
+function waParse(text, ctx) {
+  var out = [], tglAktif = null, mode = '';
+  var tagOf = function (t) { t = String(t || '').toLowerCase(); for (var i = 0; i < (ctx.domba || []).length; i++) if (ctx.domba[i].t.toLowerCase() === t) return ctx.domba[i]; return null; };
+  var L = ctx.lists || {};
+  String(text || '').split(/\r?\n/).forEach(function (raw) {
+    var line = raw.replace(/[*~]/g, '').trim(); if (!line) return;
+    var st = waStrip(line); line = st.text.replace(/^(?:[-•·]|\d+[.)])\s+/, '').trim(); if (!line) return;
+    var tgl = function () { return tglAktif || st.date || ctx.today; };
+    var rec = function (o) { o.tanggal = tgl(); o.line = line; out.push(o); return o; };
+    var tok = line.split(/\s+/).map(function (x) { return x.replace(/[,;]+$/, ''); }).filter(Boolean), w = tok[0].toLowerCase().replace(/[:.]+$/, '');
+    var timbangSeg = function (s) {
+      s.split(/;|,(?=\s*[A-Za-z])/).forEach(function (seg) {
+        var t = seg.trim().split(/[\s:=]+/).filter(Boolean).filter(function (x) { return x.toLowerCase() !== 'kg'; });
+        if (!t.length) return;
+        if (t.length % 2) { rec({ jenis: 'timbang', err: 'Tulis eartag lalu bobot, mis. J-001 35,5 (ada: ' + seg.trim() + ')' }); return; }
+        for (var i = 0; i < t.length; i += 2) {
+          var d = tagOf(t[i]), kg = waBerat(t[i + 1]), o = { jenis: 'timbang', tag: t[i], bobot: kg };
+          if (!d) o.err = 'Eartag ' + t[i] + ' tidak ditemukan';
+          else if (d.s === 'Terjual' || d.s === 'Mati') o.err = d.t + ' berstatus ' + d.s;
+          else if (kg === null || kg < 1 || kg > 300) o.err = 'Bobot ' + d.t + ' tidak wajar: ' + t[i + 1];
+          else { o.tag = d.t; o.label = d.t + ' ' + String(kg).replace('.', ',') + ' kg'; if (typeof d.b === 'number' && d.b > 0) { var sel = kg - d.b; if (sel < -3 || sel > 15) o.warn = (sel < 0 ? 'turun ' : 'naik ') + Math.abs(sel).toFixed(1) + ' kg dari timbangan terakhir'; } }
+          rec(o);
+        }
+      });
+    };
+    if (w === 'tgl' || w === 'tanggal') {
+      var v = tok.slice(1).join(' '), d0 = waTgl(v, ctx.today);
+      if (d0) tglAktif = d0; else rec({ jenis: 'tgl', err: 'Tanggal tidak dikenali: ' + v });
+      return;
+    }
+    if (w === 'timbang' || w === 'timbangan' || w === 'bobot' || w === 'massal') { mode = 'timbang'; var rest = tok.slice(1).join(' '); if (rest) timbangSeg(rest); return; }
+    var kata = w === 'kondisi' || WA_STATUS[w] || w === 'pindah' || w === 'pakan' || w === 'kas' || w === 'keuangan' || w === 'keu';
+    if (mode === 'timbang' && !kata) { timbangSeg(line); return; }
+    mode = '';
+    if (w === 'kondisi' || WA_STATUS[w] || w === 'pindah') {
+      var status = '', tag = null, pindah = '', harga = '', ket = [], err = '', i = 0, pakaiRp = false, tagI = -1;
+      for (var q = 0; q < tok.length; q++) if (tagOf(tok[q])) { tag = tagOf(tok[q]); tagI = q; break; }
+      for (; i < tok.length; i++) {
+        var x = tok[i], xl = x.toLowerCase().replace(/[:.]+$/, '');
+        if (i === tagI || xl === 'kondisi') continue;
+        if (!status && WA_STATUS[xl] && !(tag && ket.length)) { status = WA_STATUS[xl]; continue; }
+        if (xl === 'pindah') {
+          var j = i + 1; if (j === tagI) j++; if (tok[j] && tok[j].toLowerCase() === 'ke') j++; if (j === tagI) j++;
+          var mk = waCocokAwal(tok, j, L.kandang || []);
+          if (!mk) { err = 'Kandang tujuan tidak dikenali: ' + (tok[j] || '(kosong)') + (L.kandang && L.kandang.length ? ' (pilihan: ' + L.kandang.join(', ') + ')' : ''); break; }
+          pindah = mk.nilai; i = j + mk.n - 1; continue;
+        }
+        if (status === 'Terjual' && harga === '') {
+          if (xl === 'harga' || xl === 'rp' || xl === '@') { pakaiRp = true; continue; }
+          var u = waUang(x.replace(/^@/, ''));
+          if (u !== null && (u >= 1000 || pakaiRp)) { harga = u; continue; }
+        }
+        ket.push(x);
+      }
+      var o = { jenis: 'kondisi', tag: tag ? tag.t : '', status: status, pindah: pindah, harga: harga, ket: ket.join(' ') };
+      if (err) o.err = err;
+      else if (!tag) o.err = 'Eartag tidak ditemukan di pesan';
+      else if (!status && !pindah) o.err = 'Tulis status (sakit/sehat/jual/mati) atau pindah <kandang>';
+      else {
+        o.label = tag.t + ': ' + [status, pindah ? 'pindah ke ' + pindah : '', harga !== '' ? 'Rp ' + Number(harga).toLocaleString('id-ID') : ''].filter(Boolean).join(', ');
+        if (status === 'Terjual' && harga === '') o.warn = 'harga jual belum diisi';
+        if ((tag.s === 'Terjual' || tag.s === 'Mati') && status) o.warn = (o.warn ? o.warn + '; ' : '') + 'sebelumnya berstatus ' + tag.s;
+      }
+      rec(o); return;
+    }
+    if (w === 'pakan') {
+      var tw = (tok[1] || '').toLowerCase();
+      var tipe = WA_MASUK[tw] ? 'beli' : WA_KELUAR[tw] ? 'pakai' : tw === 'koreksi' || tw === 'opname' ? 'koreksi' : '';
+      var o2 = { jenis: 'pakan', tipe: tipe };
+      if (!tipe) { o2.err = 'Tulis: pakan masuk/keluar/koreksi <jenis> <jumlah kg>'; rec(o2); return; }
+      var mj = waCocokAwal(tok, 2, L.pakan || []);
+      if (!mj) { o2.err = 'Jenis pakan tidak dikenali: ' + (tok[2] || '(kosong)') + (L.pakan && L.pakan.length ? ' (pilihan: ' + L.pakan.join(', ') + ')' : ''); rec(o2); return; }
+      var kg2 = null, hg = '', kt = [], rp2 = false;
+      tok.slice(2 + mj.n).forEach(function (x) {
+        var xl = x.toLowerCase();
+        if (xl === 'kg') return;
+        if (xl === 'harga' || xl === 'rp') { rp2 = true; return; }
+        if (x.charAt(0) === '@') { var h1 = waUang(x.slice(1)); if (h1 !== null) { hg = h1; return; } }
+        if (kg2 === null && waBerat(x) !== null) { kg2 = waBerat(x); return; }
+        if (hg === '' && tipe === 'beli' && kg2 !== null && waUang(x) !== null && (rp2 || waUang(x) >= 100)) { hg = waUang(x); return; }
+        kt.push(x);
+      });
+      o2.item = mj.nilai; o2.kg = kg2; o2.harga = hg; o2.ket = kt.join(' ');
+      if (kg2 === null || kg2 <= 0) o2.err = 'Jumlah (kg) belum ada / tidak terbaca';
+      else o2.label = { beli: 'Beli ', pakai: 'Pakai ', koreksi: 'Koreksi stok ' }[tipe] + mj.nilai + ' ' + String(kg2).replace('.', ',') + ' kg' + (hg !== '' ? ' @Rp ' + Number(hg).toLocaleString('id-ID') : '');
+      rec(o2); return;
+    }
+    if (w === 'kas' || w === 'keuangan' || w === 'keu') {
+      var o3 = { jenis: 'keuangan' };
+      if (ctx.role !== 'admin') { o3.err = 'Catat kas khusus pengelola'; rec(o3); return; }
+      var mc = waCocokAwal(tok, 1, L.kategori || []);
+      if (!mc) { o3.err = 'Kategori tidak dikenali: ' + (tok[1] || '(kosong)') + (L.kategori && L.kategori.length ? ' (contoh: ' + L.kategori.slice(0, 6).join(', ') + ')' : ''); rec(o3); return; }
+      var jml = null, met = 'Tunai', pem = '', ref = '', kt3 = [], rest3 = tok.slice(1 + mc.n);
+      for (var k = 0; k < rest3.length; k++) {
+        var y = rest3[k], yl = y.toLowerCase();
+        if (yl === 'tunai' || yl === 'cash') { met = 'Tunai'; continue; }
+        if (yl === 'transfer' || yl === 'tf' || yl === 'trf') { met = 'Transfer'; continue; }
+        if (yl === 'lainnya') { met = 'Lainnya'; continue; }
+        if ((yl === 'pemilik' || yl === 'investor' || yl === 'inv') && rest3[k + 1]) { var mp = waCocokAwal(rest3, k + 1, L.pemilik || []); if (mp) { pem = mp.nilai; k += mp.n; continue; } }
+        if ((yl === 'ref' || yl === 'nota') && rest3[k + 1]) { ref = rest3[k + 1]; k++; continue; }
+        if (jml === null && waUang(y) !== null && waUang(y) > 0) { jml = waUang(y); continue; }
+        kt3.push(y);
+      }
+      o3.kategori = mc.nilai; o3.jumlah = jml; o3.metode = met; o3.pemilik = pem; o3.ref = ref; o3.ket = kt3.join(' ');
+      if (jml === null) o3.err = 'Jumlah rupiah belum ada (mis. 6500000, 6,5jt, 500rb)';
+      else o3.label = mc.nilai + ' Rp ' + Number(jml).toLocaleString('id-ID') + ' (' + met + ')';
+      rec(o3); return;
+    }
+    rec({ jenis: 'tak', err: 'Tidak dikenali. Awali dengan: timbang, sakit/sehat/jual/mati/pindah, pakan, atau kas' });
+  });
+  return out;
+}
+//WAPARSE_END
+
+var WA_CONTOH = 'tgl hari ini\n' +
+  'timbang\nJ-001 35,5\nJ-002 36\n' +
+  'sakit J-003 diare\n' +
+  'jual J-004 2.800.000\n' +
+  'pindah J-005 K2\n' +
+  'pakan masuk Silase 500 kg @1500\n' +
+  'pakan keluar Silase 120\n' +
+  'kas Pakan 6,5jt transfer beli konsentrat';
+function waCtx() {
+  return { today: today(), role: S.role, domba: (S.domba || []).map(function (x) { return { t: x.t, s: x.s, b: x.b }; }), lists: S.lists || {} };
+}
+function waOpen() {
+  var h = '<h3 style="margin:0 0 4px">Tempel dari WhatsApp</h3>' +
+    '<p class="muted small" style="margin:0 0 8px">Tempel pesan dari grup WhatsApp. Satu baris = satu data. Hasilnya diperiksa dulu sebelum disimpan.</p>' +
+    '<textarea id="wa-t" rows="8" placeholder="mis.\ntimbang\nJ-001 35,5\nJ-002 36\nsakit J-003 diare\npakan keluar Silase 120" style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--tx)"></textarea>' +
+    '<div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap"><button class="btn" type="button" id="wa-baca">Baca pesan</button><button class="btn ghost" type="button" id="wa-tempel">Tempel dari clipboard</button><button class="btn ghost" type="button" id="wa-contoh">Isi contoh</button></div>' +
+    '<div id="wa-prev"></div>' +
+    '<details style="margin-top:10px"><summary class="muted small" style="cursor:pointer">Cara menulis pesan</summary><div class="muted small" style="line-height:1.6;margin-top:6px">' +
+    '<b>Timbang massal:</b> <code>timbang</code> lalu tiap baris <code>J-001 35,5</code> (boleh satu baris dipisah koma)<br>' +
+    '<b>Kondisi:</b> <code>sakit J-003 diare</code> · <code>sehat J-003</code> · <code>jual J-004 2.800.000</code> · <code>mati J-006</code> · <code>pindah J-005 K2</code><br>' +
+    '<b>Pakan:</b> <code>pakan masuk Silase 500 @1500</code> (harga per kg, opsional) · <code>pakan keluar Silase 120</code> · <code>pakan koreksi Silase 340</code><br>' +
+    '<b>Kas (pengelola):</b> <code>kas Pakan 6,5jt transfer beli konsentrat</code> (jumlah: 6500000 / 6,5jt / 500rb)<br>' +
+    '<b>Tanggal:</b> baris <code>tgl kemarin</code> atau <code>tgl 25/10</code> berlaku untuk baris di bawahnya. Tanpa itu dipakai tanggal pesan WhatsApp (bila ikut tersalin) atau hari ini.</div></details>';
+  showSheet(h);
+  var ta = $('#wa-t');
+  $('#wa-contoh').addEventListener('click', function () { ta.value = WA_CONTOH; waBaca(); });
+  $('#wa-baca').addEventListener('click', waBaca);
+  $('#wa-tempel').addEventListener('click', async function () {
+    try { var t = await navigator.clipboard.readText(); if (t) { ta.value = t; waBaca(); } else toast('Clipboard kosong', 'warn'); }
+    catch (e) { toast('Izin clipboard ditolak. Tempel manual di kotak.', 'warn'); ta.focus(); }
+  });
+  ta.focus();
+}
+var WA_RES = [];
+function waBaca() {
+  var res = waParse($('#wa-t').value, waCtx()), box = $('#wa-prev'); WA_RES = res;
+  if (!res.length) { box.innerHTML = '<p class="muted small">Belum ada isi.</p>'; return; }
+  var ok = res.filter(function (r) { return !r.err; }).length, bad = res.length - ok;
+  var JN = { timbang: 'Timbang', kondisi: 'Kondisi', pakan: 'Pakan', keuangan: 'Kas', tgl: 'Tanggal', tak: '?' };
+  box.innerHTML = '<div class="muted small" style="margin:4px 0 6px"><b>' + ok + '</b> siap disimpan' + (bad ? ' · <b class="neg">' + bad + ' perlu diperbaiki</b>' : '') + '</div>' +
+    res.map(function (r) {
+      return '<div class="row" style="align-items:flex-start;gap:8px"><div class="a" style="min-width:0"><b>' + esc(JN[r.jenis] || '') + ' · ' + esc(r.tanggal) + '</b>' +
+        '<span>' + (r.err ? '<span class="neg">' + esc(r.err) + '</span><br><span class="muted">' + esc(r.line) + '</span>' : esc(r.label) + (r.warn ? '<br><span style="color:#b5530a">Cek: ' + esc(r.warn) + '</span>' : '')) + '</span></div></div>';
+    }).join('') +
+    '<button class="btn" type="button" id="wa-simpan" style="width:100%;margin-top:10px"' + (ok ? '' : ' disabled') + '>Simpan ' + ok + ' data</button>' +
+    (bad ? '<p class="muted small">Baris yang salah tidak disimpan. Perbaiki di kotak lalu klik Baca pesan lagi.</p>' : '');
+  var b = $('#wa-simpan'); if (b) b.addEventListener('click', waSimpan);
+}
+function waHash(s) { var h = 5381; for (var i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) | 0; return (h >>> 0).toString(36); }
+async function waSimpan() {
+  var b = $('#wa-simpan'); if (b) { b.disabled = true; b.textContent = 'Menyimpan…'; }
+  var res = WA_RES.filter(function (r) { return !r.err; }), jobs = [], massal = {}, seen = {};
+  res.forEach(function (r) {
+    if (r.jenis === 'timbang') { (massal[r.tanggal] = massal[r.tanggal] || []).push({ tag: r.tag, bobot: String(r.bobot) }); return; }
+    var p, j;
+    if (r.jenis === 'kondisi') { j = 'kondisi'; p = { tanggal: r.tanggal, eartag: r.tag, status: r.status, pindah: r.pindah, ket: r.ket, harga: r.harga === '' ? '' : String(r.harga) }; }
+    else if (r.jenis === 'pakan') {
+      j = 'stok';
+      if (r.tipe === 'koreksi') p = { tanggal: r.tanggal, tipe: 'koreksi', jenis: r.item, fisik: r.kg, ket: r.ket };
+      else p = { tanggal: r.tanggal, tipe: r.tipe, items: [{ jenis: r.item, kg: r.kg, harga: r.harga === '' ? '' : r.harga, ket: r.ket }] };
+    }
+    else if (r.jenis === 'keuangan') { j = 'keuangan'; p = { tanggal: r.tanggal, kategori: r.kategori, jumlah: String(r.jumlah), ket: r.ket, metode: r.metode, pemilik: r.pemilik, ref: r.ref }; }
+    if (p) jobs.push({ j: j, p: p, label: r.label });
+  });
+  Object.keys(massal).forEach(function (d) { jobs.push({ j: 'timbangmassal', p: { tanggal: d, items: massal[d] }, label: 'Timbang massal ' + massal[d].length + ' ekor' }); });
+  var okN = 0, gagal = 0, antri = 0;
+  for (var i = 0; i < jobs.length; i++) {
+    var js = JSON.stringify(jobs[i].j + jobs[i].p), n = (seen[js] = (seen[js] || 0) + 1);
+    var r = await kirim(jobs[i].j, jobs[i].p, jobs[i].label, 'wa' + waHash(js) + n, true);
+    if (r.ok) { okN++; if (r.queued) antri++; } else gagal++;
+  }
+  closeSheet();
+  toast('Tersimpan ' + okN + ' data dari WhatsApp' + (antri ? ' (' + antri + ' menunggu sinyal)' : '') + (gagal ? ' · ' + gagal + ' gagal, cek lagi' : ''), gagal ? 'warn' : 'ok');
+  if (okN) { lastRefresh = Date.now(); refreshAll(); }
 }
 
 /* ---------------- antrian offline ---------------- */
