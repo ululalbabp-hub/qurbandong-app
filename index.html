@@ -2578,7 +2578,7 @@ function chip(txt) { return '<span class="chip c-' + esc(txt || 'x') + '">' + es
 
 /* ---------------- sesi tersimpan di HP ---------------- */
 function saveSession() {
-  store.set('qf_session', JSON.stringify({ pin: S.pin, me: S.me, role: S.role, nama: S.nama, ringkas: S.ringkas, domba: S.domba, lists: S.lists, ts: S.ts, lap: S.lap, investor: S.investor, inv: S.inv, invList: S.invList, invPilih: S.invPilih }));
+  store.set('qf_session', JSON.stringify({ pin: S.pin, me: S.me, ss: S.ss, role: S.role, nama: S.nama, ringkas: S.ringkas, domba: S.domba, lists: S.lists, ts: S.ts, lap: S.lap, investor: S.investor, inv: S.inv, invList: S.invList, invPilih: S.invPilih }));
 }
 function loadSession() {
   try { var o = JSON.parse(store.get('qf_session') || 'null'); return o && o.pin ? o : null; } catch (e) { return null; }
@@ -2605,7 +2605,7 @@ async function doLogin() {
     var r = await api('wa_login', cred);
     if (!r.ok) { $('#loginErr').textContent = r.error || 'Gagal masuk'; return; }
     S.pin = cred; S.role = r.role; S.nama = r.nama || S.nama; S.investor = r.investor || ''; S.inv = null; S.invPilih = '';
-    S.me = { user: r.user || '', orang: r.orang || '', adaAkun: !!r.adaAkun };
+    S.me = { user: r.user || '', orang: r.orang || '', adaAkun: !!r.adaAkun }; S.ss = r.ss || '';
     S.tab = r.role === 'investor' ? 'inv' : 'home';
     if (!$('#remember').checked) store.del('qf_session');
     startApp(true);
@@ -3246,7 +3246,11 @@ async function kirim(jenis, payload, label, uidOpt, senyap) {
       if (r.retry) { qAdd({ uid: uid, jenis: jenis, payload: payload, label: label, ts: Date.now(), tries: 1 }); toast('Server sibuk. Data disimpan di HP dan dikirim ulang otomatis.', 'warn'); return { ok: true, queued: true }; }
       toast(r.error || 'Gagal menyimpan', 'err'); return { ok: false };
     }
-    if (!senyap) toast('Tersimpan ✓ ' + (r.pesan || '') + (r.peringatan ? '\n' + r.peringatan : ''), r.peringatan ? 'warn' : 'ok');
+    if (r.ss) S.ss = r.ss;
+    if (!senyap) {
+      if (r.duplikat) toast('Data identik sudah pernah dikirim sebelumnya, TIDAK ditulis lagi ke Sheets.', 'warn');
+      else toast('Tersimpan ✓ ' + (r.pesan || '') + (r.lokasi && r.lokasi.length ? '\n→ ' + r.lokasi.join(', ') : '') + (r.peringatan ? '\n' + r.peringatan : ''), r.peringatan ? 'warn' : 'ok');
+    }
     return { ok: true, res: r };
   } catch (e) {
     qAdd({ uid: uid, jenis: jenis, payload: payload, label: label, ts: Date.now(), tries: 0 });
@@ -4815,14 +4819,22 @@ async function waSimpan() {
     if (p) jobs.push({ j: j, p: p, label: r.label });
   });
   Object.keys(massal).forEach(function (d) { jobs.push({ j: 'timbangmassal', p: { tanggal: d, items: massal[d] }, label: 'Timbang massal ' + massal[d].length + ' ekor' }); });
-  var okN = 0, gagal = 0, antri = 0, nonce = Date.now().toString(36);   // nonce: tempel teks yang sama di lain waktu tidak dianggap duplikat
+  var okN = 0, gagal = 0, antri = 0, dup = 0, lok = [], nonce = Date.now().toString(36);   // nonce: tempel teks yang sama di lain waktu tidak dianggap duplikat
   for (var i = 0; i < jobs.length; i++) {
     var js = JSON.stringify(jobs[i].j + jobs[i].p), n = (seen[js] = (seen[js] || 0) + 1);
     var r = await kirim(jobs[i].j, jobs[i].p, jobs[i].label, 'wa' + waHash(js) + n + nonce, true);
-    if (r.ok) { okN++; if (r.queued) antri++; } else gagal++;
+    if (r.ok) { okN++; if (r.queued) antri++; else if (r.res && r.res.duplikat) dup++; else if (r.res && r.res.lokasi) lok = lok.concat(r.res.lokasi); } else gagal++;
   }
-  closeSheet();
-  toast('Tersimpan ' + okN + ' data dari WhatsApp' + (antri ? ' (' + antri + ' menunggu sinyal)' : '') + (gagal ? ' · ' + gagal + ' gagal, cek lagi' : ''), gagal ? 'warn' : 'ok');
+  var tulis = okN - antri - dup;
+  showSheet('<h3>Hasil simpan WhatsApp</h3>' +
+    '<div class="row"><span>Ditulis ke Sheets</span><b>' + tulis + '</b></div>' +
+    (dup ? '<div class="row"><span>Sudah pernah tersimpan (tidak ditulis lagi)</span><b>' + dup + '</b></div>' : '') +
+    (antri ? '<div class="row"><span>Menunggu sinyal (antrian)</span><b>' + antri + '</b></div>' : '') +
+    (gagal ? '<div class="row"><span>Gagal</span><b class="neg">' + gagal + '</b></div>' : '') +
+    (lok.length ? '<p class="muted small" style="margin-top:10px">Lokasi: ' + esc(lok.slice(0, 40).join(' · ')) + '</p>' : '') +
+    (S.ss ? '<p class="muted small">Spreadsheet tujuan: ' + esc(S.ss) + '</p>' : '') +
+    '<button class="btn" type="button" id="wa-ok" style="margin-top:12px">Tutup</button>');
+  var wok = $('#wa-ok'); if (wok) wok.addEventListener('click', closeSheet);
   if (okN) { lastRefresh = Date.now(); refreshAll(); }
 }
 
@@ -4897,6 +4909,7 @@ function showMenu() {
     (me.user ? '<div class="row"><span>Nama pengguna</span><b>' + esc(me.user) + '</b></div>' : '') +
     '<div class="row"><span>Peran</span><b>' + (S.role === 'admin' ? 'Pengelola' : S.role === 'investor' ? 'Investor' : 'Staf') + '</b></div>' +
     '<div class="row"><span>Data terakhir</span><b>' + (S.ts ? jam(S.ts) : '-') + '</b></div>' +
+    (S.ss ? '<div class="row"><span>Spreadsheet tujuan</span><b>' + esc(S.ss) + '</b></div>' : '') +
     '<div class="row"><span>Antrian kirim</span><b>' + n + '</b></div>' +
     (inAppsScript() || isStandalone() ? '' : (deferredPrompt ? '<button class="btn" type="button" id="mInst">Pasang aplikasi di HP</button>' :
       '<p class="muted small" style="margin-top:12px">Untuk memasang: Android (Chrome) menu ⋮ &gt; Instal aplikasi / Tambahkan ke layar utama. iPhone (Safari): tombol Bagikan &gt; Tambahkan ke Layar Utama.</p>')) +
@@ -5099,7 +5112,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
   var ses = loadSession();
   if (ses) {
-    S.pin = ses.pin; S.me = ses.me || { user: '', orang: '', adaAkun: false }; S.role = ses.role; S.nama = ses.nama || S.nama; S.investor = ses.investor || ''; S.inv = ses.inv || null; S.lap = ses.lap || null; S.invList = ses.invList || []; S.invPilih = ses.invPilih || ''; S.tab = ses.role === 'investor' ? 'inv' : 'home'; S.ringkas = ses.ringkas; S.domba = ses.domba; S.lists = ses.lists; S.ts = ses.ts || 0;
+    S.pin = ses.pin; S.ss = ses.ss || ''; S.me = ses.me || { user: '', orang: '', adaAkun: false }; S.role = ses.role; S.nama = ses.nama || S.nama; S.investor = ses.investor || ''; S.inv = ses.inv || null; S.lap = ses.lap || null; S.invList = ses.invList || []; S.invPilih = ses.invPilih || ''; S.tab = ses.role === 'investor' ? 'inv' : 'home'; S.ringkas = ses.ringkas; S.domba = ses.domba; S.lists = ses.lists; S.ts = ses.ts || 0;
     startApp(false); if (S.ringkas || S.inv) { setSync('offline'); if (S.ringkas) initLists(); }
   }
 });
