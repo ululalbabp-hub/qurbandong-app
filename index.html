@@ -4089,6 +4089,112 @@ function drawLapKeu(ctx, d, logo, H) {
   cLines(ctx, '10.5px ' + FNT, 'Laporan disusun otomatis dari aplikasi Qurbandong pada ' + tglId(d.dibuat, true) + '. Angka berbasis kas (uang yang benar-benar masuk dan keluar). Nilai domba pada posisi keuangan memakai harga pasar asumsi, bukan laporan audit.', R - M).forEach(function (l) { cText(ctx, l, M, y, '10.5px ' + FNT, '#666'); y += 14; });
   return y;
 }
+/* ---------------- PDF Mutasi (banyak halaman) ---------------- */
+async function pdfBanyak(canvases, wPx, hPx) {
+  var enc = new TextEncoder(), parts = [], offs = [], len = 0, n = canvases.length;
+  var add = function (x) { var b = typeof x === 'string' ? enc.encode(x) : x; parts.push(b); len += b.length; };
+  var pw = (wPx * 0.75).toFixed(2), ph = (hPx * 0.75).toFixed(2), kids = [];
+  for (var i = 0; i < n; i++) kids.push((3 + i * 3) + ' 0 R');
+  add('%PDF-1.4\n');
+  offs[1] = len; add('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  offs[2] = len; add('2 0 obj\n<< /Type /Pages /Kids [' + kids.join(' ') + '] /Count ' + n + ' >>\nendobj\n');
+  for (var k = 0; k < n; k++) {
+    var jb = await canvasBlob(canvases[k], 'image/jpeg', 0.9), jpg = new Uint8Array(await jb.arrayBuffer()), o = 3 + k * 3;
+    offs[o] = len; add(o + ' 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' + pw + ' ' + ph + '] /Contents ' + (o + 1) + ' 0 R /Resources << /XObject << /Im0 ' + (o + 2) + ' 0 R >> >> >>\nendobj\n');
+    var cs = 'q ' + pw + ' 0 0 ' + ph + ' 0 0 cm /Im0 Do Q';
+    offs[o + 1] = len; add((o + 1) + ' 0 obj\n<< /Length ' + cs.length + ' >>\nstream\n' + cs + '\nendstream\nendobj\n');
+    offs[o + 2] = len; add((o + 2) + ' 0 obj\n<< /Type /XObject /Subtype /Image /Width ' + canvases[k].width + ' /Height ' + canvases[k].height + ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ' + jpg.length + ' >>\nstream\n');
+    add(jpg); add('\nendstream\nendobj\n');
+  }
+  var total = 3 + n * 3, xo = len, x = 'xref\n0 ' + total + '\n0000000000 65535 f \n';
+  for (var j = 1; j < total; j++) x += String(offs[j]).padStart(10, '0') + ' 00000 n \n';
+  add(x + 'trailer\n<< /Size ' + total + ' /Root 1 0 R >>\nstartxref\n' + xo + '\n%%EOF');
+  return new Blob(parts, { type: 'application/pdf' });
+}
+async function renderMutPages(r, profil) {
+  var logo = null; try { logo = await loadImg(LOGO); } catch (e) { /* tanpa logo */ }
+  var W = DOC_W, H = 1123, M = 40, R = W - M, G = '#0d4715', O = '#e9762b', P = profil || {}, K = DOC_K, pages = [], ctx, y, pg = 0;
+  var cols = [{ h: 'Tanggal', x: M + 6 }, { h: 'Keterangan', x: M + 82 }, { h: 'Oleh', x: M + 330 }, { h: 'Masuk', x: M + 468, a: 'r' }, { h: 'Keluar', x: M + 556, a: 'r' }, { h: 'Saldo', x: R - 6, a: 'r' }];
+  var fit = function (t, w, font) { ctx.font = font; t = String(t == null ? '' : t); if (ctx.measureText(t).width <= w) return t; while (t.length > 3 && ctx.measureText(t + '…').width > w) t = t.slice(0, -1); return t + '…'; };
+  var num = function (v) { return v ? nf0.format(Math.abs(v)) : '-'; };
+  var head = function (first) {
+    var c = document.createElement('canvas'); c.width = Math.round(W * K); c.height = Math.round(H * K); ctx = c.getContext('2d'); ctx.scale(K, K); pages.push(c); pg++;
+    ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, W, H); ctx.fillStyle = G; ctx.fillRect(0, 0, W, 10); ctx.fillStyle = O; ctx.fillRect(0, 10, W, 3);
+    if (first) {
+      if (logo) ctx.drawImage(logo, M - 6, 26, 92, 73);
+      cText(ctx, P.nama || 'Qurbandong Farm', M + 96, 52, 'bold 19px ' + FNT, G);
+      var ly = 70; if (P.alamat) cLines(ctx, '11.5px ' + FNT, P.alamat, 330).forEach(function (l) { cText(ctx, l, M + 96, ly, '11.5px ' + FNT, '#444'); ly += 14; });
+      if (P.telp) cText(ctx, 'Telp / WA: ' + P.telp, M + 96, ly, '11.5px ' + FNT, '#444');
+      cText(ctx, 'MUTASI KEUANGAN', R, 50, 'bold 21px ' + FNT, O, 'right');
+      cText(ctx, bulanLabel(r.bulan), R, 72, 'bold 14px ' + FNT, '#111', 'right');
+      cText(ctx, 'Dicetak ' + new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }), R, 90, '11px ' + FNT, '#666', 'right');
+      y = 112; ctx.fillStyle = G; ctx.fillRect(M, y, R - M, 2); y += 16;
+      var bw = (R - M - 18) / 4, kot = [['Saldo awal', r.saldoAwal, '#111'], ['Uang masuk', r.masuk, '#1e6b34'], ['Uang keluar', r.keluar, '#9c0006'], ['Saldo akhir', r.saldoAkhir, '#111']];
+      kot.forEach(function (b, i) { var x = M + i * (bw + 6); ctx.fillStyle = '#f2f5f2'; ctx.fillRect(x, y, bw, 52); cText(ctx, b[0], x + 10, y + 19, '11px ' + FNT, '#666'); cText(ctx, rp(b[1]), x + 10, y + 40, 'bold 13.5px ' + FNT, b[2]); });
+      y += 52 + 18;
+    } else {
+      cText(ctx, (P.nama || 'Qurbandong Farm') + ' · Mutasi Keuangan ' + bulanLabel(r.bulan), M, 38, 'bold 12px ' + FNT, G);
+      y = 52;
+    }
+    var rh = 24; ctx.fillStyle = G; ctx.fillRect(M, y, R - M, rh);
+    cols.forEach(function (c2) { cText(ctx, c2.h, c2.x, y + 16, 'bold 11.5px ' + FNT, '#fff', c2.a === 'r' ? 'right' : 'left'); });
+    y += rh;
+  };
+  head(true);
+  var RH = 34, limit = H - 70;
+  r.rows.forEach(function (t, i) {
+    if (y + RH > limit) head(false);
+    if (i % 2) { ctx.fillStyle = '#f6f4ee'; ctx.fillRect(M, y, R - M, RH); }
+    cText(ctx, tglPendek(t.d), cols[0].x, y + 14, '11px ' + FNT, '#222');
+    cText(ctx, fit(t.kat, 240, 'bold 11.5px ' + FNT), cols[1].x, y + 14, 'bold 11.5px ' + FNT, '#111');
+    var sub = [t.ket, t.metode, t.ref].filter(Boolean).join(' · ');
+    if (sub) cText(ctx, fit(sub, 240, '10px ' + FNT), cols[1].x, y + 27, '10px ' + FNT, '#666');
+    cText(ctx, fit(t.oleh, 70, '11px ' + FNT), cols[2].x, y + 14, '11px ' + FNT, '#222');
+    cText(ctx, t.masuk > 0 ? num(t.masuk) : '-', cols[3].x, y + 14, '11.5px ' + FNT, t.masuk > 0 ? '#1e6b34' : '#999', 'right');
+    cText(ctx, t.keluar > 0 ? num(t.keluar) : '-', cols[4].x, y + 14, '11.5px ' + FNT, t.keluar > 0 ? '#9c0006' : '#999', 'right');
+    cText(ctx, (t.saldo < 0 ? '-' : '') + num(t.saldo), cols[5].x, y + 14, '11.5px ' + FNT, '#111', 'right');
+    y += RH;
+  });
+  if (!r.rows.length) { cText(ctx, 'Belum ada transaksi di bulan ini.', M + 6, y + 22, '12px ' + FNT, '#666'); y += 36; }
+  else {
+    if (y + 30 > limit) head(false);
+    ctx.fillStyle = '#e4ece0'; ctx.fillRect(M, y, R - M, 28);
+    cText(ctx, 'Total bulan ini', cols[1].x, y + 18, 'bold 11.5px ' + FNT, G);
+    cText(ctx, num(r.masuk), cols[3].x, y + 18, 'bold 11.5px ' + FNT, '#1e6b34', 'right');
+    cText(ctx, num(r.keluar), cols[4].x, y + 18, 'bold 11.5px ' + FNT, '#9c0006', 'right');
+    cText(ctx, (r.saldoAkhir < 0 ? '-' : '') + num(r.saldoAkhir), cols[5].x, y + 18, 'bold 11.5px ' + FNT, '#111', 'right');
+    y += 28 + 8;
+  }
+  var cat = 'Saldo dihitung kumulatif dari catatan pertama di Keu_Input, belum termasuk modal/saldo awal rekening. "Oleh" = akun yang mencatat.';
+  cLines(ctx, '10px ' + FNT, cat, R - M).forEach(function (l, i) { cText(ctx, l, M, y + 12 + i * 13, '10px ' + FNT, '#777'); });
+  pages.forEach(function (c, i) { var cx = c.getContext('2d'); cx.setTransform(K, 0, 0, K, 0, 0); cText(cx, 'Halaman ' + (i + 1) + ' dari ' + pages.length, R, H - 24, '10px ' + FNT, '#777', 'right'); });
+  return { pages: pages, w: W, h: H };
+}
+function teksMutasi(r, nm) {
+  var t = '*Mutasi ' + nm + ' - ' + bulanLabel(r.bulan) + '*\nSaldo awal: ' + rp(r.saldoAwal) + '\nUang masuk: ' + rp(r.masuk) + '\nUang keluar: ' + rp(r.keluar) + '\nSaldo akhir: ' + rp(r.saldoAkhir) + '\n';
+  var n = 0; r.rows.slice(-15).forEach(function (x) { n++; t += '\n' + tglPendek(x.d) + ' ' + x.kat + ' ' + (x.masuk > 0 ? '+' + rp(x.masuk) : '-' + rp(x.keluar)) + ' (' + x.oleh + ')'; });
+  if (r.rows.length > n) t += '\n... (' + (r.rows.length - n) + ' transaksi lebih awal ada di PDF)';
+  return t;
+}
+async function shareMutasi(mode) {
+  var r = S.mut; if (!r) { toast('Mutasi belum dimuat', 'err'); return; }
+  var nm = ((S.dok && S.dok.profil && S.dok.profil.nama) || 'Qurbandong Farm');
+  if (mode === 'teks') { window.open('https://wa.me/?text=' + encodeURIComponent(teksMutasi(r, nm)), '_blank', 'noopener'); return; }
+  toast('Menyiapkan PDF mutasi…');
+  try {
+    var pr = await renderMutPages(r, S.dok && S.dok.profil), blob = await pdfBanyak(pr.pages, pr.w, pr.h);
+    var nama = 'Mutasi_' + r.bulan + '.pdf', file = new File([blob], nama, { type: 'application/pdf' });
+    if (mode !== 'unduh' && navigator.canShare && navigator.canShare({ files: [file] })) {
+      try { await navigator.share({ files: [file], text: 'Mutasi keuangan ' + nm + ' ' + bulanLabel(r.bulan) + '. Saldo akhir ' + rp(r.saldoAkhir) + '.', title: nama }); return; }
+      catch (e) { if (e && e.name === 'AbortError') return; }
+    }
+    var u = URL.createObjectURL(blob), a = document.createElement('a');
+    a.href = u; a.download = nama; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(u); }, 20000);
+    toast('PDF ' + nama + ' tersimpan. Buka WhatsApp lalu lampirkan file itu, atau pakai tombol "Kirim ringkasan teks".', 'ok');
+  } catch (e) { toast('Gagal membuat PDF. Coba lagi.', 'err'); }
+}
+
 function shareLapKeu() {
   if (!S.rek || !S.rek.rekap) { toast('Data laporan belum dimuat. Coba lagi sebentar.', 'err'); return; }
   var ms = repMonths(S.rek.rekap), m = (S.repBulan != null && ms.indexOf(S.repBulan) >= 0) ? S.repBulan : ms[ms.length - 1];
@@ -4911,6 +5017,7 @@ function renderMut() {
       '<span>' + [t.metode, t.pemilik, t.ref].filter(Boolean).map(esc).join(' · ') + '</span><span class="by">oleh ' + esc(t.oleh) + '</span></div>' +
       '<div class="r"><b class="' + (t.masuk > 0 ? 'pos' : 'neg') + '">' + (t.masuk > 0 ? '+ ' + rp(t.masuk) : '− ' + rp(t.keluar)) + '</b><span>Saldo ' + rp(t.saldo) + '</span></div></div>';
   });
+  h += '<div class="mut-f" style="margin-top:12px"><button type="button" class="on" data-ms="pdf">Bagikan PDF ke WhatsApp</button><button type="button" data-ms="unduh">Unduh PDF</button><button type="button" data-ms="teks">Kirim ringkasan teks</button></div>';
   h += '<p class="muted small" style="margin:12px 4px">Saldo dihitung kumulatif dari catatan pertama di Keu_Input, belum termasuk modal atau saldo awal rekening. Penginput berasal dari akun yang dipakai saat mencatat; catatan lama atau yang diketik langsung di Sheets tampil tanpa nama.</p>';
   box.innerHTML = h;
 }
@@ -4920,7 +5027,10 @@ function mutSiap() {
     if (e.target.id === 'mut-b') { S.mutOleh = ''; S.mutBulan = e.target.value; loadMut(e.target.value); }
     if (e.target.id === 'mut-o') { S.mutOleh = e.target.value; renderMut(); }
   });
-  box.addEventListener('click', function (e) { var b = e.target.closest('[data-mf]'); if (b) { S.mutF = b.getAttribute('data-mf'); renderMut(); } });
+  box.addEventListener('click', function (e) {
+    var m = e.target.closest('[data-ms]'); if (m) { shareMutasi(m.getAttribute('data-ms')); return; }
+    var b = e.target.closest('[data-mf]'); if (b) { S.mutF = b.getAttribute('data-mf'); renderMut(); }
+  });
 }
 
 /* ---------------- event ---------------- */
