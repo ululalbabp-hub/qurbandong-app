@@ -2607,6 +2607,16 @@ async function loadInv() {
   S.invRekap = r.rekap || null;
   return true;
 }
+/* Muat diam-diam data tab berat (keuangan, laporan) setelah login, supaya saat tab dibuka sudah siap. Sekali per sesi. */
+var prefetched = false;
+function prefetchTabs() {
+  if (prefetched || S.role === 'investor') return;
+  prefetched = true;
+  setTimeout(function () {
+    try { if (S.role === 'admin' && !S.rek) loadRekap(false); } catch (e) { /* abaikan */ }
+    try { if (!S.lap) loadLap(); } catch (e) { /* abaikan */ }
+  }, 400);
+}
 async function refreshAll() {
   setSync('loading');
   if (S.role === 'investor') {
@@ -2626,7 +2636,7 @@ async function refreshAll() {
     S.role = r.role; S.ringkas = r; S.domba = d.domba; S.lists = d.lists; S.ts = Date.now();
     if (S.role === 'admin') { S.invList = (d.lists && d.lists.pemilik) || S.invList; if (S.invPilih) { try { await loadInv(); } catch (e2) { /* abaikan */ } } }
     if ($('#remember').checked || store.get('qf_session')) saveSession();
-    setSync('ok'); renderAll(); initLists(); afterRefresh();
+    setSync('ok'); renderAll(); initLists(); afterRefresh(); prefetchTabs();
   } catch (e) { setSync('offline'); }
 }
 
@@ -3234,14 +3244,14 @@ function readImage(file) {
     var url = URL.createObjectURL(file), im = new Image();
     im.onload = function () {
       try {
-        var tries = [[1280, 0.8], [1024, 0.7], [800, 0.6]], out = null;
+        var tries = [[1024, 0.72], [800, 0.64], [640, 0.56]], out = null;
         for (var i = 0; i < tries.length; i++) {
           var sc = Math.min(1, tries[i][0] / Math.max(im.naturalWidth, im.naturalHeight));
           var c = document.createElement('canvas'); c.width = Math.max(1, Math.round(im.naturalWidth * sc)); c.height = Math.max(1, Math.round(im.naturalHeight * sc));
           c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
           var u = c.toDataURL('image/jpeg', tries[i][1]);
           out = { mime: 'image/jpeg', data: u.split(',')[1], preview: u };
-          if (out.data.length <= 2300000) break;
+          if (out.data.length <= 450000) break;
         }
         URL.revokeObjectURL(url); resolve(out);
       } catch (e) { URL.revokeObjectURL(url); reject(e); }
