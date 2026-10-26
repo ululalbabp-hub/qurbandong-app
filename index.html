@@ -4623,6 +4623,10 @@ function waParse(text, ctx) {
     if ((first === 'tgl' || first === 'tanggal')) { var v0 = line.split(/\s+/).slice(1).join(' '); out.push({ jenis: 'tgl', tanggal: baseTgl(), line: line, err: 'Tanggal tidak dikenali: ' + v0 }); return; }
     var T = line.split(/\s+/).map(function (x) { return { w: x.replace(/^[(\["']+|[)\]"',;:!?]+$/g, ''), u: false }; }).filter(function (x) { return x.w; });
     T.forEach(function (z) { z.l = z.w.toLowerCase(); });
+    // angka + satuan yang dipisah spasi ("4 jt", "500 rb", "50 kg") digabung agar terbaca sebagai satu angka
+    for (var mi = 0; mi < T.length - 1; mi++) {
+      if (/^\d+(?:[.,]\d+)?$/.test(T[mi].l) && /^(jt|juta|rb|ribu|k|kg|kgs|kilo)$/.test(T[mi + 1].l)) { T[mi].w = T[mi].w + T[mi + 1].w; T[mi].l = T[mi].w.toLowerCase(); T.splice(mi + 1, 1); }
+    }
     var has = function (set) { for (var i = 0; i < T.length; i++) if (set[T[i].l]) return true; return false; };
     // tanggal di dalam kalimat
     var tglBaris = null;
@@ -4730,8 +4734,10 @@ function waParse(text, ctx) {
       ents3.forEach(function (e, ix) {
         var o2 = { jenis: 'pakan', tipe: tipe, item: e.nilai, kg: e.num ? e.num.a.dec : null, harga: '', ket: sisaKet().join(' ') };
         if (tipe === 'beli' && uangPakan.length) o2.harga = uangPakan[Math.min(ix, uangPakan.length - 1)].a.int;
-        if (o2.kg === null || !(o2.kg > 0)) o2.err = 'Jumlah (kg) belum ada / tidak terbaca';
-        else { o2.label = { beli: 'Beli ', pakai: 'Pakai ', koreksi: 'Koreksi stok ' }[tipe] + e.nilai + ' ' + String(o2.kg).replace('.', ',') + ' kg' + (o2.harga !== '' ? ' @' + rp(o2.harga) : ''); if (tersirat) o2.warn = 'tidak tertulis masuk/keluar, dianggap dipakai (keluar)'; }
+        var totalDiubah = false;
+        if (o2.harga !== '' && o2.kg > 0 && o2.harga >= 50000) { o2.harga = Math.round(o2.harga / o2.kg); totalDiubah = true; }
+        if (o2.kg === null || !(o2.kg > 0)) o2.err = 'Jumlah (kg) belum ada / tidak terbaca' + (o2.harga !== '' && o2.harga != null && o2.harga >= 1000 && o2.tipe === 'beli' ? '. Kalau ini pengeluaran uang saja, awali dengan "kas" (mis. kas konsentrat 4jt)' : '');
+        else { o2.label = { beli: 'Beli ', pakai: 'Pakai ', koreksi: 'Koreksi stok ' }[tipe] + e.nilai + ' ' + String(o2.kg).replace('.', ',') + ' kg' + (o2.harga !== '' ? ' @' + rp(o2.harga) : ''); if (tersirat) o2.warn = 'tidak tertulis masuk/keluar, dianggap dipakai (keluar)'; if (totalDiubah) o2.warn = 'angka uang dianggap total pembelian, harga dihitung per kg'; }
         rec(o2);
       });
       return;
@@ -4809,10 +4815,10 @@ async function waSimpan() {
     if (p) jobs.push({ j: j, p: p, label: r.label });
   });
   Object.keys(massal).forEach(function (d) { jobs.push({ j: 'timbangmassal', p: { tanggal: d, items: massal[d] }, label: 'Timbang massal ' + massal[d].length + ' ekor' }); });
-  var okN = 0, gagal = 0, antri = 0;
+  var okN = 0, gagal = 0, antri = 0, nonce = Date.now().toString(36);   // nonce: tempel teks yang sama di lain waktu tidak dianggap duplikat
   for (var i = 0; i < jobs.length; i++) {
     var js = JSON.stringify(jobs[i].j + jobs[i].p), n = (seen[js] = (seen[js] || 0) + 1);
-    var r = await kirim(jobs[i].j, jobs[i].p, jobs[i].label, 'wa' + waHash(js) + n, true);
+    var r = await kirim(jobs[i].j, jobs[i].p, jobs[i].label, 'wa' + waHash(js) + n + nonce, true);
     if (r.ok) { okN++; if (r.queued) antri++; } else gagal++;
   }
   closeSheet();
