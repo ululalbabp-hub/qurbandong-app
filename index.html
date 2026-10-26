@@ -5021,17 +5021,37 @@ function renderMut() {
   if (!r) { box.innerHTML = '<p class="muted small" style="padding:6px">Memuat mutasi…</p>'; return; }
   var fl = S.mutF || 'semua', oleh = S.mutOleh || '';
   var orang = []; r.rows.forEach(function (t) { if (orang.indexOf(t.oleh) < 0) orang.push(t.oleh); });
-  var rows = r.rows.filter(function (t) { return (fl === 'semua' || (fl === 'masuk' && t.masuk > 0) || (fl === 'keluar' && t.keluar > 0)) && (!oleh || t.oleh === oleh); });
+  var kat = S.mutKat || '', urut = S.mutS || 'tgl_asc', kats = []; r.rows.forEach(function (t) { if (kats.indexOf(t.kat) < 0) kats.push(t.kat); }); kats.sort();
+  var rows = r.rows.filter(function (t) { return (fl === 'semua' || (fl === 'masuk' && t.masuk > 0) || (fl === 'keluar' && t.keluar > 0)) && (!oleh || t.oleh === oleh) && (!kat || t.kat === kat); });
+  var jml = function (t) { return t.masuk > 0 ? t.masuk : t.keluar; }, cmpS = function (a, b) { return a < b ? -1 : a > b ? 1 : 0; };
+  var SORTS = { tgl_asc: ['Tanggal: terlama dulu', null], tgl_desc: ['Tanggal: terbaru dulu', null], oleh: ['Penginput (A-Z)', function (t) { return t.oleh; }], kat: ['Kategori (A-Z)', function (t) { return t.kat; }],
+    metode: ['Metode (Tunai/Transfer)', function (t) { return t.metode || '-'; }], jml_desc: ['Jumlah: terbesar', null], jml_asc: ['Jumlah: terkecil', null] };
+  var idx = {}; r.rows.forEach(function (t, i) { idx[t.d + '|' + i] = i; });
+  rows = rows.map(function (t) { return { t: t, i: r.rows.indexOf(t) }; });
+  rows.sort(function (A, B) {
+    var a = A.t, b = B.t, c = 0;
+    if (urut === 'tgl_desc') c = cmpS(b.d, a.d) || (B.i - A.i);
+    else if (urut === 'jml_desc') c = jml(b) - jml(a);
+    else if (urut === 'jml_asc') c = jml(a) - jml(b);
+    else if (SORTS[urut] && SORTS[urut][1]) c = cmpS(String(SORTS[urut][1](a)).toLowerCase(), String(SORTS[urut][1](b)).toLowerCase()) || cmpS(a.d, b.d);
+    return c || (A.i - B.i);
+  });
+  rows = rows.map(function (x) { return x.t; });
+  var grupKey = function (t) { return urut === 'oleh' ? 'Oleh ' + t.oleh : urut === 'kat' ? t.kat : urut === 'metode' ? (t.metode || '-') : (urut === 'jml_desc' || urut === 'jml_asc') ? '' : tglPendek(t.d); };
+  var subtot = {}; rows.forEach(function (t) { var g = grupKey(t); var o = subtot[g] || (subtot[g] = { m: 0, k: 0 }); o.m += t.masuk; o.k += t.keluar; });
   var h = '<div class="mut-f"><select id="mut-b" aria-label="Bulan">' + (r.daftarBulan.some(function (b) { return b.b === r.bulan; }) ? '' : '<option value="' + r.bulan + '" selected>' + bulanLabel(r.bulan) + '</option>') +
     r.daftarBulan.map(function (b) { return '<option value="' + b.b + '"' + (b.b === r.bulan ? ' selected' : '') + '>' + bulanLabel(b.b) + ' (' + b.n + ')</option>'; }).join('') + '</select></div>' +
     '<div class="mut-sum"><div><span>Saldo awal</span><b>' + rp(r.saldoAwal) + '</b></div><div><span>Saldo akhir</span><b>' + rp(r.saldoAkhir) + '</b></div>' +
     '<div><span>Uang masuk</span><b class="pos">+ ' + rp(r.masuk) + '</b></div><div><span>Uang keluar</span><b class="neg">− ' + rp(r.keluar) + '</b></div></div>' +
     '<div class="mut-f">' + [['semua', 'Semua'], ['masuk', 'Masuk'], ['keluar', 'Keluar']].map(function (x) { return '<button type="button" data-mf="' + x[0] + '" class="' + (fl === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') +
+    '</div><div class="mut-f"><select id="mut-s" aria-label="Urutkan">' + Object.keys(SORTS).map(function (k) { return '<option value="' + k + '"' + (k === urut ? ' selected' : '') + '>Urutkan: ' + SORTS[k][0] + '</option>'; }).join('') + '</select>' +
+    (kats.length > 1 ? '<select id="mut-k" aria-label="Kategori"><option value="">Semua kategori</option>' + kats.map(function (k) { return '<option value="' + esc(k) + '"' + (k === kat ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('') + '</select>' : '') +
     (orang.length > 1 ? '<select id="mut-o" aria-label="Penginput"><option value="">Semua penginput</option>' + orang.map(function (o) { return '<option value="' + esc(o) + '"' + (o === oleh ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>' : '') + '</div>';
   if (!rows.length) h += '<p class="muted small" style="padding:10px 4px">' + (r.n ? 'Tidak ada transaksi untuk filter ini.' : 'Belum ada transaksi di bulan ini.') + '</p>';
   var last = '';
   rows.forEach(function (t) {
-    if (t.d !== last) { last = t.d; h += '<div class="mut-d">' + tglPendek(t.d) + '</div>'; }
+    var gk = grupKey(t);
+    if (gk !== last) { last = gk; if (gk) { var st = subtot[gk]; h += '<div class="mut-d">' + esc(gk) + (urut === 'tgl_asc' || urut === 'tgl_desc' ? '' : ' · ' + (st.m ? '+' + rp(st.m) + ' ' : '') + (st.k ? '−' + rp(st.k) : '')) + '</div>'; } }
     h += '<div class="mut-t"><div class="l"><b>' + esc(t.kat) + '</b>' + (t.ket ? '<span>' + esc(t.ket) + '</span>' : '') +
       '<span>' + [t.metode, t.pemilik, t.ref].filter(Boolean).map(esc).join(' · ') + '</span><span class="by">oleh ' + esc(t.oleh) + '</span></div>' +
       '<div class="r"><b class="' + (t.masuk > 0 ? 'pos' : 'neg') + '">' + (t.masuk > 0 ? '+ ' + rp(t.masuk) : '− ' + rp(t.keluar)) + '</b><span>Saldo ' + rp(t.saldo) + '</span></div></div>';
@@ -5043,8 +5063,10 @@ function renderMut() {
 function mutSiap() {
   var box = $('#s-mut');
   box.addEventListener('change', function (e) {
-    if (e.target.id === 'mut-b') { S.mutOleh = ''; S.mutBulan = e.target.value; loadMut(e.target.value); }
+    if (e.target.id === 'mut-b') { S.mutOleh = ''; S.mutKat = ''; S.mutBulan = e.target.value; loadMut(e.target.value); }
     if (e.target.id === 'mut-o') { S.mutOleh = e.target.value; renderMut(); }
+    if (e.target.id === 'mut-s') { S.mutS = e.target.value; renderMut(); }
+    if (e.target.id === 'mut-k') { S.mutKat = e.target.value; renderMut(); }
   });
   box.addEventListener('click', function (e) {
     var m = e.target.closest('[data-ms]'); if (m) { shareMutasi(m.getAttribute('data-ms')); return; }
