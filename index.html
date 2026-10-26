@@ -4363,184 +4363,210 @@ function waStrip(line) {
   if (m) return { text: line.slice(m[0].length), date: waIso(parseInt(m[3], 10), parseInt(m[2], 10), parseInt(m[1], 10)) };
   return { text: line, date: null };
 }
-var WA_STATUS = { sakit: 'Sakit', sehat: 'Sehat', jual: 'Terjual', terjual: 'Terjual', mati: 'Mati' };
-var WA_MASUK = { masuk: 1, beli: 1, datang: 1, tambah: 1 }, WA_KELUAR = { keluar: 1, pakai: 1, kasih: 1, ambil: 1 };
+var WA_STATUS = { sakit: 'Sakit', sehat: 'Sehat', sembuh: 'Sehat', jual: 'Terjual', dijual: 'Terjual', terjual: 'Terjual', laku: 'Terjual', mati: 'Mati', meninggal: 'Mati', mampus: 'Mati' };
+var WA_GEJALA = { diare: 1, mencret: 1, pincang: 1, batuk: 1, kembung: 1, lesu: 1, demam: 1, lemas: 1, pilek: 1, ingusan: 1, cacingan: 1, kudis: 1, scabies: 1, orf: 1, bloat: 1 };
+var WA_PINDAH = { pindah: 1, dipindah: 1, dipindahkan: 1, pindahkan: 1, pindahin: 1, dipindahin: 1, mutasi: 1 };
+var WA_BELI = { masuk: 1, beli: 1, dibeli: 1, datang: 1, tambah: 1, terima: 1, dapat: 1 };
+var WA_PAKAI = { keluar: 1, pakai: 1, dipakai: 1, kasih: 1, dikasih: 1, diberi: 1, beri: 1, habis: 1, ambil: 1, diambil: 1 };
+var WA_KOREKSI = { koreksi: 1, opname: 1, sisa: 1, hitung: 1, fisik: 1 };
+var WA_KAS = { kas: 1, keuangan: 1, keu: 1, bayar: 1, dibayar: 1, bayaran: 1, uang: 1 };
+var WA_ISI = { dan: 1, yang: 1, si: 1, tadi: 1, ekor: 1, di: 1, ke: 1, sudah: 1, udah: 1, nih: 1, ya: 1, dong: 1, pak: 1, bu: 1, mas: 1, mba: 1, mbak: 1, kak: 1, untuk: 1, buat: 1, sebanyak: 1, sebesar: 1, seberat: 1, berat: 1, beratnya: 1, bobot: 1, bobotnya: 1, bb: 1, timbang: 1, timbangan: 1, ditimbang: 1, massal: 1, kondisi: 1, pakan: 1, stok: 1, catat: 1, tolong: 1, hasil: 1, jadi: 1, itu: 1, ini: 1, dengan: 1, sama: 1, kg: 1, kilo: 1, kgs: 1, tgl: 1, tanggal: 1, hari: 1, pagi: 1, siang: 1, sore: 1, malam: 1, kemarin: 1, lusa: 1, domba: 1, eartag: 1, nomor: 1, no: 1, rp: 1, harga: 1, seharga: 1, senilai: 1, per: 1, perkg: 1, pemilik: 1, investor: 1, inv: 1, ref: 1, nota: 1, tunai: 1, cash: 1, transfer: 1, tf: 1, trf: 1, lainnya: 1, kandang: 1 };
+/** Angka bebas: "35,5", "35.5kg", "2.800.000", "6,5jt", "500rb", "Rp 150.000", "@1500". k: uang | kg | plain (plain = tergantung konteks). */
+function waAngka(raw) {
+  var t = String(raw || '').toLowerCase().replace(/[,;:!?]+$/, ''), m, rp = false;
+  if (/^rp\.?/.test(t)) { rp = true; t = t.replace(/^rp\.?/, ''); }
+  if (t.charAt(0) === '@') { rp = true; t = t.slice(1); }
+  if (!t) return null;
+  var f = function (x) { return parseFloat(String(x).replace(',', '.')); };
+  if ((m = t.match(/^(\d+(?:[.,]\d+)?)(jt|juta)$/))) return { dec: f(m[1]) * 1e6, int: Math.round(f(m[1]) * 1e6), k: 'uang' };
+  if ((m = t.match(/^(\d+(?:[.,]\d+)?)(rb|ribu|k)$/))) return { dec: f(m[1]) * 1e3, int: Math.round(f(m[1]) * 1e3), k: 'uang' };
+  if ((m = t.match(/^(\d+(?:[.,]\d+)?)(kg|kgs|kilo)$/))) return { dec: f(m[1]), int: Math.round(f(m[1])), k: 'kg' };
+  if (/^\d{1,3}([.,]\d{3}){2,}$/.test(t)) { var v = parseInt(t.replace(/[.,]/g, ''), 10); return { dec: v, int: v, k: 'uang' }; }
+  if (/^\d{1,3}[.,]\d{3}$/.test(t)) return { dec: f(t), int: parseInt(t.replace(/[.,]/g, ''), 10), k: rp ? 'uang' : 'plain' };
+  if (/^\d+([.,]\d+)?$/.test(t)) { var d = f(t); return { dec: d, int: /^\d+$/.test(t) ? parseInt(t, 10) : Math.round(d), k: rp ? 'uang' : 'plain' }; }
+  return null;
+}
+/** Cari nama daftar di dalam kalimat (urutan bebas): cocok persis (1-4 kata) atau kata khas (>=4 huruf, unik di daftar). */
+function waCariDaftar(T, list, abbr) {
+  var out = [], i, n, s;
+  if (!list || !list.length) return out;
+  var kata = {};
+  list.forEach(function (x) { String(x).split(/[^A-Za-z0-9]+/).forEach(function (w) { w = waNorm(w); if (w.length >= 4) (kata[w] = kata[w] || {})[x] = 1; }); });
+  for (i = 0; i < T.length; i++) {
+    if (T[i].u) continue;
+    var hit = null;
+    for (n = Math.min(4, T.length - i); n >= 1 && !hit; n--) {
+      var seg = T.slice(i, i + n); if (seg.some(function (z) { return z.u; })) continue;
+      s = waNorm(seg.map(function (z) { return z.w; }).join(' '));
+      for (var k = 0; k < list.length; k++) if (waNorm(list[k]) === s) { hit = { nilai: list[k], i: i, n: n }; break; }
+    }
+    if (!hit) {
+      var w1 = waNorm(T[i].w), ks = kata[w1] ? Object.keys(kata[w1]) : [];
+      if (ks.length === 1) hit = { nilai: ks[0], i: i, n: 1 };
+      else if (abbr && /^[a-z]\d+$/.test(w1)) { var ab = waCocok(w1, list); if (ab) hit = { nilai: ab, i: i, n: 1 }; }
+    }
+    if (hit) { out.push(hit); i += hit.n - 1; }
+  }
+  return out;
+}
+function waPasang(ents, nums) {
+  var pasang = [], pakai = {};
+  if (ents.length > 1 && nums.length === ents.length) {
+    var semuaSesudah = nums[0].i > ents[ents.length - 1].i, semuaSebelum = nums[nums.length - 1].i < ents[0].i, mulaiAngka = nums[0].i < ents[0].i && ents.every(function (e, k) { return nums[k].i < e.i; });
+    if (semuaSesudah || semuaSebelum || mulaiAngka) { ents.forEach(function (e, k) { e.num = nums[k]; }); return ents; }
+  }
+  ents.forEach(function (e, ei) {
+    var batas = ents[ei + 1] ? ents[ei + 1].i : 1e9;
+    for (var k = 0; k < nums.length; k++) if (!pakai[k] && nums[k].i > e.i && nums[k].i < batas) { pakai[k] = 1; e.num = nums[k]; break; }
+  });
+  ents.forEach(function (e, ei) {
+    if (e.num) return;
+    var awal = ents[ei - 1] ? ents[ei - 1].i : -1;
+    for (var k = nums.length - 1; k >= 0; k--) if (!pakai[k] && nums[k].i < e.i && nums[k].i > awal) { pakai[k] = 1; e.num = nums[k]; break; }
+  });
+  return ents;
+}
 function waParse(text, ctx) {
-  var out = [], tglAktif = null, mode = '';
-  var tagOf = function (t) { t = String(t || '').toLowerCase(); for (var i = 0; i < (ctx.domba || []).length; i++) if (ctx.domba[i].t.toLowerCase() === t) return ctx.domba[i]; return null; };
-  var L = ctx.lists || {};
+  var out = [], tglAktif = null, L = ctx.lists || {};
+  var domba = ctx.domba || [];
+  var tagOf = function (tok) { var n = waNorm(tok); if (!n) return null; for (var i = 0; i < domba.length; i++) if (waNorm(domba[i].t) === n) return domba[i]; return null; };
+  var angkaDiRupiah = function (a) { return a && (a.k === 'uang' || (a.k === 'plain' && a.int >= 1000)); };
   String(text || '').split(/\r?\n/).forEach(function (raw) {
     var line = raw.replace(/[*~]/g, '').trim(); if (!line) return;
     var st = waStrip(line); line = st.text.replace(/^(?:[-•·]|\d+[.)])\s+/, '').trim(); if (!line) return;
-    var tgl = function () { return tglAktif || st.date || ctx.today; };
-    var rec = function (o) { o.tanggal = tgl(); o.line = line; out.push(o); return o; };
-    var tok = line.split(/\s+/).map(function (x) { return x.replace(/[,;]+$/, ''); }).filter(Boolean), w = tok[0].toLowerCase().replace(/[:.]+$/, '');
-    var timbangSeg = function (s) {
-      s.split(/;|,(?=\s*[A-Za-z])/).forEach(function (seg) {
-        var t = seg.trim().split(/[\s:=]+/).filter(Boolean).filter(function (x) { return x.toLowerCase() !== 'kg'; });
-        if (!t.length) return;
-        if (t.length % 2) { rec({ jenis: 'timbang', err: 'Tulis eartag lalu bobot, mis. J-001 35,5 (ada: ' + seg.trim() + ')' }); return; }
-        for (var i = 0; i < t.length; i += 2) {
-          var d = tagOf(t[i]), kg = waBerat(t[i + 1]), o = { jenis: 'timbang', tag: t[i], bobot: kg };
-          if (!d) o.err = 'Eartag ' + t[i] + ' tidak ditemukan';
-          else if (d.s === 'Terjual' || d.s === 'Mati') o.err = d.t + ' berstatus ' + d.s;
-          else if (kg === null || kg < 1 || kg > 300) o.err = 'Bobot ' + d.t + ' tidak wajar: ' + t[i + 1];
-          else { o.tag = d.t; o.label = d.t + ' ' + String(kg).replace('.', ',') + ' kg'; if (typeof d.b === 'number' && d.b > 0) { var sel = kg - d.b; if (sel < -3 || sel > 15) o.warn = (sel < 0 ? 'turun ' : 'naik ') + Math.abs(sel).toFixed(1) + ' kg dari timbangan terakhir'; } }
+    var baseTgl = function () { return tglAktif || st.date || ctx.today; };
+    var first = line.split(/\s+/)[0].toLowerCase().replace(/[:.]+$/, '');
+    if ((first === 'tgl' || first === 'tanggal') && line.split(/\s+/).length > 1 && waTgl(line.split(/\s+/).slice(1).join(' '), ctx.today) !== null) { tglAktif = waTgl(line.split(/\s+/).slice(1).join(' '), ctx.today); return; }
+    if ((first === 'tgl' || first === 'tanggal')) { var v0 = line.split(/\s+/).slice(1).join(' '); out.push({ jenis: 'tgl', tanggal: baseTgl(), line: line, err: 'Tanggal tidak dikenali: ' + v0 }); return; }
+    var T = line.split(/\s+/).map(function (x) { return { w: x.replace(/^[(\["']+|[)\]"',;:!?]+$/g, ''), u: false }; }).filter(function (x) { return x.w; });
+    T.forEach(function (z) { z.l = z.w.toLowerCase(); });
+    var has = function (set) { for (var i = 0; i < T.length; i++) if (set[T[i].l]) return true; return false; };
+    // tanggal di dalam kalimat
+    var tglBaris = null;
+    T.forEach(function (z, i) { if (z.l === 'kemarin') tglBaris = waGeser(ctx.today, -1); else if (z.l === 'lusa') tglBaris = waGeser(ctx.today, -2); else if ((z.l === 'tgl' || z.l === 'tanggal') && T[i + 1] && waTgl(T[i + 1].w, ctx.today)) { tglBaris = waTgl(T[i + 1].w, ctx.today); T[i + 1].u = true; } });
+    var tanggal = tglAktif || tglBaris || st.date || ctx.today;
+    var rec = function (o) { o.tanggal = o.tanggal || tanggal; o.line = line; out.push(o); return o; };
+    // eartag
+    var tags = [];
+    T.forEach(function (z, i) { var d = tagOf(z.w); if (d) { z.u = true; tags.push({ i: i, d: d }); } });
+    var mirip = null;
+    if (!tags.length) T.forEach(function (z) { if (!mirip && /^[A-Za-z]{1,3}-?\d{1,5}$/.test(z.w) && !WA_KAS[z.l] && !/^[a-z]\d+$/i.test(z.w) ) mirip = z.w; });
+    var statusKata = '', gejala = [];
+    T.forEach(function (z) { if (WA_STATUS[z.l] && !statusKata) statusKata = WA_STATUS[z.l]; if (WA_GEJALA[z.l]) gejala.push(z.l); });
+    var pindahKata = has(WA_PINDAH), kas = has(WA_KAS) || has({ keuangan: 1, keu: 1 });
+    var angka = function () { var r = []; T.forEach(function (z, i) { if (z.u) return; var a = waAngka(z.w); if (a) { var p = T[i - 1] ? T[i - 1].l : ''; if (a.k === 'plain' && (p === 'harga' || p === 'rp' || p === 'seharga' || p === 'senilai')) a.k = 'uang'; r.push({ i: i, a: a }); } }); return r; };
+    var sisa = function () { return T.filter(function (z) { return !z.u && !WA_ISI[z.l] && !WA_KAS[z.l] && !WA_STATUS[z.l] && !WA_PINDAH[z.l] && !WA_BELI[z.l] && !WA_PAKAI[z.l] && !WA_KOREKSI[z.l] && !waAngka(z.w); }).map(function (z) { return z.w; }); };
+    var sisaKet = function () { return T.filter(function (z) { return !z.u && !WA_ISI[z.l] && !WA_KAS[z.l] && !(WA_STATUS[z.l] && !WA_GEJALA[z.l]) && !WA_PINDAH[z.l] && !WA_BELI[z.l] && !WA_PAKAI[z.l] && !WA_KOREKSI[z.l] && !waAngka(z.w); }).map(function (z) { return z.w; }); };
+    var rp = function (n) { return 'Rp ' + Number(n).toLocaleString('id-ID'); };
+
+    /* ====== KONDISI / TIMBANG: kalimat yang menyebut eartag ====== */
+    if (tags.length) {
+      var kdMatch = [];
+      if (pindahKata || T.some(function (z) { return z.l === 'ke'; })) {
+        kdMatch = waCariDaftar(T, L.kandang || [], true).filter(function (m) { return pindahKata || (T[m.i - 1] && (T[m.i - 1].l === 'ke' || (T[m.i - 1].l === 'kandang' && T[m.i - 2] && T[m.i - 2].l === 'ke'))); });
+      }
+      var pindah = kdMatch.length ? kdMatch[0].nilai : '';
+      if (kdMatch.length) for (var q = 0; q < kdMatch[0].n; q++) T[kdMatch[0].i + q].u = true;
+      var status = statusKata || (gejala.length ? 'Sakit' : '');
+      if (pindahKata && !pindah) { tags.forEach(function (tg) { rec({ jenis: 'kondisi', tag: tg.d.t, status: status, pindah: '', harga: '', ket: '', err: 'Kandang tujuan tidak dikenali' + (L.kandang && L.kandang.length ? ' (pilihan: ' + L.kandang.join(', ') + ')' : '') }); }); return; }
+      var nums = angka();
+      if (status || pindah) {
+        var hargaNum = status === 'Terjual' ? nums.filter(function (n) { return angkaDiRupiah(n.a); }) : [];
+        var bobotNum = nums.filter(function (n) { return !angkaDiRupiah(n.a) && n.a.dec >= 1 && n.a.dec <= 300 && (n.a.k === 'kg' || has({ berat: 1, beratnya: 1, bobot: 1, bobotnya: 1, bb: 1, timbang: 1, ditimbang: 1 })); });
+        hargaNum.forEach(function (n) { T[n.i].u = true; });
+        var ents = waPasang(tags.map(function (tg) { return { i: tg.i, d: tg.d }; }), hargaNum);
+        var ket = sisaKet().join(' ');
+        ents.forEach(function (e) {
+          var d = e.d, o = { jenis: 'kondisi', tag: d.t, status: status, pindah: pindah, harga: e.num && status === 'Terjual' ? e.num.a.int : '', ket: ket };
+          if (status === 'Terjual' && o.harga === '' && hargaNum.length === 1 && tags.length > 1) o.harga = '';
+          o.label = d.t + ': ' + [status, pindah ? 'pindah ke ' + pindah : '', o.harga !== '' ? rp(o.harga) : ''].filter(Boolean).join(', ');
+          if (status === 'Terjual' && o.harga === '') o.warn = 'harga jual belum diisi';
+          if ((d.s === 'Terjual' || d.s === 'Mati') && status) o.warn = (o.warn ? o.warn + '; ' : '') + 'sebelumnya berstatus ' + d.s;
           rec(o);
+        });
+        if (bobotNum.length === 1 && tags.length === 1) {
+          var d1 = tags[0].d, kg1 = bobotNum[0].a.dec;
+          if (d1.s !== 'Terjual' && d1.s !== 'Mati') { var ob = { jenis: 'timbang', tag: d1.t, bobot: kg1, label: d1.t + ' ' + String(kg1).replace('.', ',') + ' kg' }; if (typeof d1.b === 'number' && d1.b > 0) { var sl = kg1 - d1.b; if (sl < -3 || sl > 15) ob.warn = (sl < 0 ? 'turun ' : 'naik ') + Math.abs(sl).toFixed(1) + ' kg dari timbangan terakhir'; } rec(ob); }
         }
+        return;
+      }
+      // timbang
+      var cand = nums.filter(function (n) { return !(n.a.k === 'uang'); });
+      var ent2 = waPasang(tags.map(function (tg) { return { i: tg.i, d: tg.d }; }), cand);
+      ent2.forEach(function (e) {
+        var d = e.d, kg = e.num ? e.num.a.dec : null, o = { jenis: 'timbang', tag: d.t, bobot: kg };
+        if (d.s === 'Terjual' || d.s === 'Mati') o.err = d.t + ' berstatus ' + d.s;
+        else if (kg === null) o.err = 'Bobot ' + d.t + ' belum ada. Tulis angka kg, mis. ' + d.t + ' 35,5';
+        else if (kg < 1 || kg > 300) o.err = 'Bobot ' + d.t + ' tidak wajar: ' + String(kg).replace('.', ',');
+        else { o.label = d.t + ' ' + String(kg).replace('.', ',') + ' kg'; if (typeof d.b === 'number' && d.b > 0) { var sel = kg - d.b; if (sel < -3 || sel > 15) o.warn = (sel < 0 ? 'turun ' : 'naik ') + Math.abs(sel).toFixed(1) + ' kg dari timbangan terakhir'; } }
+        rec(o);
       });
-    };
-    if (w === 'tgl' || w === 'tanggal') {
-      var v = tok.slice(1).join(' '), d0 = waTgl(v, ctx.today);
-      if (d0) tglAktif = d0; else rec({ jenis: 'tgl', err: 'Tanggal tidak dikenali: ' + v });
       return;
     }
-    if (w === 'timbang' || w === 'timbangan' || w === 'bobot' || w === 'massal') { mode = 'timbang'; var rest = tok.slice(1).join(' '); if (rest) timbangSeg(rest); return; }
-    var kata = w === 'kondisi' || WA_STATUS[w] || w === 'pindah' || w === 'pakan' || w === 'kas' || w === 'keuangan' || w === 'keu';
-    if (mode === 'timbang' && !kata) { timbangSeg(line); return; }
-    mode = '';
-    if (w === 'kondisi' || WA_STATUS[w] || w === 'pindah') {
-      var status = '', tag = null, pindah = '', harga = '', ket = [], err = '', i = 0, pakaiRp = false, tagI = -1;
-      for (var q = 0; q < tok.length; q++) if (tagOf(tok[q])) { tag = tagOf(tok[q]); tagI = q; break; }
-      for (; i < tok.length; i++) {
-        var x = tok[i], xl = x.toLowerCase().replace(/[:.]+$/, '');
-        if (i === tagI || xl === 'kondisi') continue;
-        if (!status && WA_STATUS[xl] && !(tag && ket.length)) { status = WA_STATUS[xl]; continue; }
-        if (xl === 'pindah') {
-          var j = i + 1; if (j === tagI) j++; if (tok[j] && tok[j].toLowerCase() === 'ke') j++; if (j === tagI) j++;
-          var mk = waCocokAwal(tok, j, L.kandang || []);
-          if (!mk) { err = 'Kandang tujuan tidak dikenali: ' + (tok[j] || '(kosong)') + (L.kandang && L.kandang.length ? ' (pilihan: ' + L.kandang.join(', ') + ')' : ''); break; }
-          pindah = mk.nilai; i = j + mk.n - 1; continue;
-        }
-        if (status === 'Terjual' && harga === '') {
-          if (xl === 'harga' || xl === 'rp' || xl === '@') { pakaiRp = true; continue; }
-          var u = waUang(x.replace(/^@/, ''));
-          if (u !== null && (u >= 1000 || pakaiRp)) { harga = u; continue; }
-        }
-        ket.push(x);
-      }
-      var o = { jenis: 'kondisi', tag: tag ? tag.t : '', status: status, pindah: pindah, harga: harga, ket: ket.join(' ') };
-      if (err) o.err = err;
-      else if (!tag) o.err = 'Eartag tidak ditemukan di pesan';
-      else if (!status && !pindah) o.err = 'Tulis status (sakit/sehat/jual/mati) atau pindah <kandang>';
-      else {
-        o.label = tag.t + ': ' + [status, pindah ? 'pindah ke ' + pindah : '', harga !== '' ? 'Rp ' + Number(harga).toLocaleString('id-ID') : ''].filter(Boolean).join(', ');
-        if (status === 'Terjual' && harga === '') o.warn = 'harga jual belum diisi';
-        if ((tag.s === 'Terjual' || tag.s === 'Mati') && status) o.warn = (o.warn ? o.warn + '; ' : '') + 'sebelumnya berstatus ' + tag.s;
-      }
-      rec(o); return;
-    }
-    if (w === 'pakan') {
-      var tw = (tok[1] || '').toLowerCase();
-      var tipe = WA_MASUK[tw] ? 'beli' : WA_KELUAR[tw] ? 'pakai' : tw === 'koreksi' || tw === 'opname' ? 'koreksi' : '';
-      var o2 = { jenis: 'pakan', tipe: tipe };
-      if (!tipe) { o2.err = 'Tulis: pakan masuk/keluar/koreksi <jenis> <jumlah kg>'; rec(o2); return; }
-      var mj = waCocokAwal(tok, 2, L.pakan || []);
-      if (!mj) { o2.err = 'Jenis pakan tidak dikenali: ' + (tok[2] || '(kosong)') + (L.pakan && L.pakan.length ? ' (pilihan: ' + L.pakan.join(', ') + ')' : ''); rec(o2); return; }
-      var kg2 = null, hg = '', kt = [], rp2 = false;
-      tok.slice(2 + mj.n).forEach(function (x) {
-        var xl = x.toLowerCase();
-        if (xl === 'kg') return;
-        if (xl === 'harga' || xl === 'rp') { rp2 = true; return; }
-        if (x.charAt(0) === '@') { var h1 = waUang(x.slice(1)); if (h1 !== null) { hg = h1; return; } }
-        if (kg2 === null && waBerat(x) !== null) { kg2 = waBerat(x); return; }
-        if (hg === '' && tipe === 'beli' && kg2 !== null && waUang(x) !== null && (rp2 || waUang(x) >= 100)) { hg = waUang(x); return; }
-        kt.push(x);
-      });
-      o2.item = mj.nilai; o2.kg = kg2; o2.harga = hg; o2.ket = kt.join(' ');
-      if (kg2 === null || kg2 <= 0) o2.err = 'Jumlah (kg) belum ada / tidak terbaca';
-      else o2.label = { beli: 'Beli ', pakai: 'Pakai ', koreksi: 'Koreksi stok ' }[tipe] + mj.nilai + ' ' + String(kg2).replace('.', ',') + ' kg' + (hg !== '' ? ' @Rp ' + Number(hg).toLocaleString('id-ID') : '');
-      rec(o2); return;
-    }
-    if (w === 'kas' || w === 'keuangan' || w === 'keu') {
+
+    /* ====== PAKAN / KAS: tanpa eartag ====== */
+    var jenisM = [], katM = [];
+    if (kas) { katM = waCariDaftar(T, L.kategori || [], false); katM.forEach(function (m) { for (var q = 0; q < m.n; q++) T[m.i + q].u = true; }); }
+    jenisM = waCariDaftar(T, L.pakan || [], false);
+    if (!kas && !jenisM.length) { katM = waCariDaftar(T, L.kategori || [], false); }
+    else if (!kas) { /* ada jenis pakan: kategori hanya bila ada kata kas */ }
+    if (!kas && !jenisM.length) katM.forEach(function (m) { for (var q = 0; q < m.n; q++) T[m.i + q].u = true; });
+    var nums2 = angka();
+    var adaUang = nums2.some(function (n) { return n.a.k === 'uang' || (n.a.k === 'plain' && n.a.int >= 1000 && !jenisM.length); });
+    var adaKg = nums2.some(function (n) { return n.a.k === 'kg' || n.a.k === 'plain'; });
+    var jadiKas = kas ? true : (!jenisM.length && katM.length && adaUang);
+    if (jadiKas) {
       var o3 = { jenis: 'keuangan' };
       if (ctx.role !== 'admin') { o3.err = 'Catat kas khusus pengelola'; rec(o3); return; }
-      var mc = waCocokAwal(tok, 1, L.kategori || []);
-      if (!mc) { o3.err = 'Kategori tidak dikenali: ' + (tok[1] || '(kosong)') + (L.kategori && L.kategori.length ? ' (contoh: ' + L.kategori.slice(0, 6).join(', ') + ')' : ''); rec(o3); return; }
-      var jml = null, met = 'Tunai', pem = '', ref = '', kt3 = [], rest3 = tok.slice(1 + mc.n);
-      for (var k = 0; k < rest3.length; k++) {
-        var y = rest3[k], yl = y.toLowerCase();
-        if (yl === 'tunai' || yl === 'cash') { met = 'Tunai'; continue; }
-        if (yl === 'transfer' || yl === 'tf' || yl === 'trf') { met = 'Transfer'; continue; }
-        if (yl === 'lainnya') { met = 'Lainnya'; continue; }
-        if ((yl === 'pemilik' || yl === 'investor' || yl === 'inv') && rest3[k + 1]) { var mp = waCocokAwal(rest3, k + 1, L.pemilik || []); if (mp) { pem = mp.nilai; k += mp.n; continue; } }
-        if ((yl === 'ref' || yl === 'nota') && rest3[k + 1]) { ref = rest3[k + 1]; k++; continue; }
-        if (jml === null && waUang(y) !== null && waUang(y) > 0) { jml = waUang(y); continue; }
-        kt3.push(y);
-      }
-      o3.kategori = mc.nilai; o3.jumlah = jml; o3.metode = met; o3.pemilik = pem; o3.ref = ref; o3.ket = kt3.join(' ');
-      if (jml === null) o3.err = 'Jumlah rupiah belum ada (mis. 6500000, 6,5jt, 500rb)';
-      else o3.label = mc.nilai + ' Rp ' + Number(jml).toLocaleString('id-ID') + ' (' + met + ')';
+      if (!katM.length) { o3.err = 'Kategori tidak dikenali' + (L.kategori && L.kategori.length ? ' (contoh: ' + L.kategori.slice(0, 6).join(', ') + ')' : ''); rec(o3); return; }
+      var met = 'Tunai', pem = '', ref = '';
+      T.forEach(function (z, i) {
+        if (z.u) return;
+        if (z.l === 'tunai' || z.l === 'cash') { met = 'Tunai'; z.u = true; }
+        else if (z.l === 'transfer' || z.l === 'tf' || z.l === 'trf') { met = 'Transfer'; z.u = true; }
+        else if (z.l === 'lainnya') { met = 'Lainnya'; z.u = true; }
+      });
+      T.forEach(function (z, i) {
+        if (z.u) return;
+        if ((z.l === 'pemilik' || z.l === 'investor' || z.l === 'inv') && T[i + 1]) { var pm = waCariDaftar(T.slice(i + 1), L.pemilik || [], false)[0]; if (pm && pm.i === 0) { pem = pm.nilai; for (var q = 0; q < pm.n; q++) T[i + 1 + q].u = true; z.u = true; } }
+        else if ((z.l === 'ref' || z.l === 'nota') && T[i + 1]) { ref = T[i + 1].w; T[i + 1].u = true; z.u = true; }
+      });
+      var nums3 = angka(), uangN = nums3.filter(function (n) { return n.a.k === 'uang'; })[0] || nums3.filter(function (n) { return n.a.k === 'plain' && n.a.int >= 1000; })[0] || nums3.filter(function (n) { return n.a.k === 'plain'; })[0];
+      if (uangN) T[uangN.i].u = true;
+      o3.kategori = katM[0].nilai; o3.jumlah = uangN ? uangN.a.int : null; o3.metode = met; o3.pemilik = pem; o3.ref = ref; o3.ket = T.filter(function (z) { return !z.u && !WA_ISI[z.l] && !WA_KAS[z.l] && !waAngka(z.w); }).map(function (z) { return z.w; }).join(' ');
+      if (!uangN || !(o3.jumlah > 0)) o3.err = 'Jumlah rupiah belum ada (mis. 6500000, 6,5jt, 500rb)';
+      else o3.label = o3.kategori + ' ' + rp(o3.jumlah) + ' (' + met + ')';
       rec(o3); return;
     }
-    rec({ jenis: 'tak', err: 'Tidak dikenali. Awali dengan: timbang, sakit/sehat/jual/mati/pindah, pakan, atau kas' });
+    if (jenisM.length) {
+      jenisM.forEach(function (m) { for (var q = 0; q < m.n; q++) T[m.i + q].u = true; });
+      var tipe = has(WA_KOREKSI) ? 'koreksi' : has(WA_BELI) ? 'beli' : has(WA_PAKAI) ? 'pakai' : 'pakai';
+      var tersirat = !has(WA_KOREKSI) && !has(WA_BELI) && !has(WA_PAKAI);
+      var ents3 = waPasang(jenisM.map(function (m) { return { i: m.i, nilai: m.nilai }; }), nums2.filter(function (n) { return n.a.k !== 'uang'; }));
+      var uangPakan = nums2.filter(function (n) { return n.a.k === 'uang'; });
+      ents3.forEach(function (e, ix) {
+        var o2 = { jenis: 'pakan', tipe: tipe, item: e.nilai, kg: e.num ? e.num.a.dec : null, harga: '', ket: sisaKet().join(' ') };
+        if (tipe === 'beli' && uangPakan.length) o2.harga = uangPakan[Math.min(ix, uangPakan.length - 1)].a.int;
+        if (o2.kg === null || !(o2.kg > 0)) o2.err = 'Jumlah (kg) belum ada / tidak terbaca';
+        else { o2.label = { beli: 'Beli ', pakai: 'Pakai ', koreksi: 'Koreksi stok ' }[tipe] + e.nilai + ' ' + String(o2.kg).replace('.', ',') + ' kg' + (o2.harga !== '' ? ' @' + rp(o2.harga) : ''); if (tersirat) o2.warn = 'tidak tertulis masuk/keluar, dianggap dipakai (keluar)'; }
+        rec(o2);
+      });
+      return;
+    }
+    // tidak ada yang cocok
+    var sisaKata = T.filter(function (z) { return !z.u && !WA_ISI[z.l] && !WA_KAS[z.l] && !WA_BELI[z.l] && !WA_PAKAI[z.l] && !WA_KOREKSI[z.l] && !WA_STATUS[z.l] && !WA_PINDAH[z.l]; });
+    if (!sisaKata.length && !nums2.length) return;   // baris judul seperti "timbang" / "pakan:" saja
+    if (mirip) { rec({ jenis: 'tak', err: 'Eartag ' + mirip + ' tidak ditemukan' }); return; }
+    if (T.some(function (z) { return z.l === 'pakan'; })) { rec({ jenis: 'pakan', err: 'Jenis pakan tidak dikenali' + (L.pakan && L.pakan.length ? ' (pilihan: ' + L.pakan.join(', ') + ')' : '') }); return; }
+    rec({ jenis: 'tak', err: 'Tidak dikenali. Sebutkan eartag (timbang/kondisi), jenis pakan, atau kategori kas' });
   });
-  return out;
-}
-/** Ubah usulan AI (JSON) menjadi catatan yang sama bentuknya dengan hasil waParse, lengkap dengan pemeriksaan. */
-function waDariAi(records, tidakJelas, ctx) {
-  var out = [], L = ctx.lists || {};
-  var tagOf = function (t) { t = String(t || '').toLowerCase(); for (var i = 0; i < (ctx.domba || []).length; i++) if (ctx.domba[i].t.toLowerCase() === t) return ctx.domba[i]; return null; };
-  var angka = function (v) { if (typeof v === 'number') return isFinite(v) ? v : null; var u = waBerat(String(v || '').replace(/\s/g, '')); return u; };
-  var rupiah = function (v) { if (typeof v === 'number') return isFinite(v) ? Math.round(v) : null; return waUang(String(v || '')); };
-  (records || []).forEach(function (r) {
-    if (!r || typeof r !== 'object') return;
-    var tgl = /^\d{4}-\d{2}-\d{2}$/.test(String(r.tanggal || '')) && waIso(+r.tanggal.slice(0, 4), +r.tanggal.slice(5, 7), +r.tanggal.slice(8, 10)) || ctx.today;
-    var o = { jenis: String(r.jenis || ''), tanggal: tgl, line: String(r.sumber || '').slice(0, 120), ai: true };
-    var j = o.jenis;
-    if (j === 'timbang') {
-      var d = tagOf(r.tag), kg = angka(r.bobot); o.tag = r.tag; o.bobot = kg;
-      if (!d) o.err = 'Eartag ' + r.tag + ' tidak ditemukan';
-      else if (d.s === 'Terjual' || d.s === 'Mati') o.err = d.t + ' berstatus ' + d.s;
-      else if (kg === null || kg < 1 || kg > 300) o.err = 'Bobot ' + d.t + ' tidak wajar: ' + r.bobot;
-      else { o.tag = d.t; o.label = d.t + ' ' + String(kg).replace('.', ',') + ' kg'; if (typeof d.b === 'number' && d.b > 0) { var sel = kg - d.b; if (sel < -3 || sel > 15) o.warn = (sel < 0 ? 'turun ' : 'naik ') + Math.abs(sel).toFixed(1) + ' kg dari timbangan terakhir'; } }
-    } else if (j === 'kondisi') {
-      var dm = tagOf(r.tag), st = String(r.status || '').trim(); st = st ? st.charAt(0).toUpperCase() + st.slice(1).toLowerCase() : '';
-      var pd = r.pindah ? waCocok(r.pindah, L.kandang || []) : '', hg = r.harga !== undefined && r.harga !== null && r.harga !== '' ? rupiah(r.harga) : '';
-      o.tag = r.tag; o.status = st; o.pindah = pd || ''; o.harga = hg === null ? '' : hg; o.ket = String(r.ket || '').slice(0, 150);
-      if (!dm) o.err = 'Eartag ' + r.tag + ' tidak ditemukan';
-      else if (st && ['Sehat', 'Sakit', 'Terjual', 'Mati'].indexOf(st) < 0) o.err = 'Status tidak dikenal: ' + r.status;
-      else if (r.pindah && !pd) o.err = 'Kandang tujuan tidak dikenali: ' + r.pindah;
-      else if (!st && !pd) o.err = 'Tidak ada status atau kandang tujuan';
-      else {
-        o.tag = dm.t;
-        o.label = dm.t + ': ' + [st, pd ? 'pindah ke ' + pd : '', o.harga !== '' ? 'Rp ' + Number(o.harga).toLocaleString('id-ID') : ''].filter(Boolean).join(', ');
-        if (st === 'Terjual' && o.harga === '') o.warn = 'harga jual belum diisi';
-        if ((dm.s === 'Terjual' || dm.s === 'Mati') && st) o.warn = (o.warn ? o.warn + '; ' : '') + 'sebelumnya berstatus ' + dm.s;
-      }
-    } else if (j === 'pakan') {
-      var tp = String(r.tipe || '').toLowerCase(), it = waCocok(r.item, L.pakan || []), kg2 = angka(r.kg), h2 = r.harga !== undefined && r.harga !== null && r.harga !== '' ? rupiah(r.harga) : '';
-      o.tipe = tp; o.item = it; o.kg = kg2; o.harga = h2 === null ? '' : h2; o.ket = String(r.ket || '').slice(0, 150);
-      if (['beli', 'pakai', 'koreksi'].indexOf(tp) < 0) o.err = 'Jenis transaksi pakan tidak jelas';
-      else if (!it) o.err = 'Jenis pakan tidak dikenali: ' + r.item + (L.pakan && L.pakan.length ? ' (pilihan: ' + L.pakan.join(', ') + ')' : '');
-      else if (kg2 === null || kg2 <= 0) o.err = 'Jumlah (kg) tidak terbaca';
-      else o.label = { beli: 'Beli ', pakai: 'Pakai ', koreksi: 'Koreksi stok ' }[tp] + it + ' ' + String(kg2).replace('.', ',') + ' kg' + (o.harga !== '' && tp === 'beli' ? ' @Rp ' + Number(o.harga).toLocaleString('id-ID') : '');
-    } else if (j === 'keuangan') {
-      var kt = waCocok(r.kategori, L.kategori || []), jm = rupiah(r.jumlah), mt = String(r.metode || 'Tunai').toLowerCase();
-      mt = /transfer|tf|trf/.test(mt) ? 'Transfer' : /lain/.test(mt) ? 'Lainnya' : 'Tunai';
-      var pm = r.pemilik ? waCocok(r.pemilik, L.pemilik || []) : '';
-      o.kategori = kt; o.jumlah = jm; o.metode = mt; o.pemilik = pm || ''; o.ref = String(r.ref || '').slice(0, 60); o.ket = String(r.ket || '').slice(0, 150);
-      if (ctx.role !== 'admin') o.err = 'Catat kas khusus pengelola';
-      else if (!kt) o.err = 'Kategori tidak dikenali: ' + r.kategori;
-      else if (jm === null || jm <= 0) o.err = 'Jumlah rupiah tidak terbaca';
-      else if (r.pemilik && !pm) o.err = 'Pemilik tidak dikenali: ' + r.pemilik;
-      else o.label = kt + ' Rp ' + Number(jm).toLocaleString('id-ID') + ' (' + mt + ')';
-    } else { o.jenis = 'tak'; o.err = 'Jenis catatan tidak dikenal'; }
-    out.push(o);
-  });
-  (tidakJelas || []).forEach(function (x) { if (x) out.push({ jenis: 'tak', tanggal: ctx.today, line: String((x.sumber) || '').slice(0, 120), err: 'AI ragu: ' + String(x.alasan || 'maksud tidak jelas').slice(0, 140), ai: true }); });
   return out;
 }
 //WAPARSE_END
 
 var WA_CONTOH = 'tgl hari ini\n' +
-  'timbang\nJ-001 35,5\nJ-002 36\n' +
-  'sakit J-003 diare\n' +
-  'jual J-004 2.800.000\n' +
-  'pindah J-005 K2\n' +
-  'pakan masuk Silase 500 kg @1500\n' +
-  'pakan keluar Silase 120\n' +
-  'kas Pakan 6,5jt transfer beli konsentrat';
+  'J-001 35,5\n41 kg J-002\nJ-003 pincang\nJ-004 laku 2,8jt\nJ-005 dipindah ke kandang 2\n' +
+  'silase 120 kg dipakai\nbeli konsentrat 200kg @8000\nbayar gaji 2jt';
 function waCtx() {
   return { today: today(), role: S.role, domba: (S.domba || []).map(function (x) { return { t: x.t, s: x.s, b: x.b }; }), lists: S.lists || {} };
 }
@@ -4548,49 +4574,36 @@ function waOpen() {
   var h = '<h3 style="margin:0 0 4px">Tempel dari WhatsApp</h3>' +
     '<p class="muted small" style="margin:0 0 8px">Tempel pesan dari grup WhatsApp. Satu baris = satu data. Hasilnya diperiksa dulu sebelum disimpan.</p>' +
     '<textarea id="wa-t" rows="8" placeholder="mis.\ntimbang\nJ-001 35,5\nJ-002 36\nsakit J-003 diare\npakan keluar Silase 120" style="width:100%;box-sizing:border-box;font:inherit;font-size:14px;padding:10px 12px;border:1px solid var(--bd);border-radius:12px;background:var(--card);color:var(--tx)"></textarea>' +
-    '<div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap"><button class="btn" type="button" id="wa-ai">Baca dengan AI</button><button class="btn ghost" type="button" id="wa-baca">Baca cepat</button><button class="btn ghost" type="button" id="wa-tempel">Tempel dari clipboard</button></div>' +
-    '<p class="muted small" style="margin:-2px 0 6px"><b>AI</b> memahami bahasa bebas (butuh sinyal). <b>Baca cepat</b> memakai format baku, tanpa sinyal. Keduanya diperiksa dulu sebelum disimpan. <a href="#" id="wa-contoh">Isi contoh</a></p>' +
+    '<div style="display:flex;gap:8px;margin:8px 0;flex-wrap:wrap"><button class="btn" type="button" id="wa-baca">Baca pesan</button><button class="btn ghost" type="button" id="wa-tempel">Tempel dari clipboard</button><button class="btn ghost" type="button" id="wa-contoh">Isi contoh</button></div>' +
     '<div id="wa-prev"></div>' +
-    '<details style="margin-top:10px"><summary class="muted small" style="cursor:pointer">Format untuk Baca cepat (tanpa AI)</summary><div class="muted small" style="line-height:1.6;margin-top:6px">' +
-    '<b>Timbang massal:</b> <code>timbang</code> lalu tiap baris <code>J-001 35,5</code> (boleh satu baris dipisah koma)<br>' +
-    '<b>Kondisi:</b> <code>sakit J-003 diare</code> · <code>sehat J-003</code> · <code>jual J-004 2.800.000</code> · <code>mati J-006</code> · <code>pindah J-005 K2</code><br>' +
-    '<b>Pakan:</b> <code>pakan masuk Silase 500 @1500</code> (harga per kg, opsional) · <code>pakan keluar Silase 120</code> · <code>pakan koreksi Silase 340</code><br>' +
-    '<b>Kas (pengelola):</b> <code>kas Pakan 6,5jt transfer beli konsentrat</code> (jumlah: 6500000 / 6,5jt / 500rb)<br>' +
-    '<b>Tanggal:</b> baris <code>tgl kemarin</code> atau <code>tgl 25/10</code> berlaku untuk baris di bawahnya. Tanpa itu dipakai tanggal pesan WhatsApp (bila ikut tersalin) atau hari ini.</div></details>';
+    '<details style="margin-top:10px"><summary class="muted small" style="cursor:pointer">Contoh kalimat yang bisa dibaca</summary><div class="muted small" style="line-height:1.6;margin-top:6px">' +
+    '<b>Urutan kata bebas.</b> Yang penting menyebut eartag, jenis pakan, atau kategori kas, plus angkanya. Satu baris = satu catatan.<br>' +
+    '<b>Timbang:</b> <code>J-001 35,5</code> · <code>41,5 kg J-001</code> · <code>J-001 beratnya 41,5 kg</code> · <code>J-001 36 dan J-002 38</code><br>' +
+    '<b>Kondisi:</b> <code>J-003 sakit</code> · <code>pincang J-003</code> · <code>J-003 diare sejak kemarin</code> · <code>J-005 dipindah ke kandang 2</code> · <code>J-004 laku 2,8jt</code> · <code>J-006 mati</code><br>' +
+    '<b>Pakan:</b> <code>silase 120 kg dipakai</code> · <code>kasih konsentrat 50</code> · <code>beli konsentrat 200kg @8000</code> · <code>sisa silase 340</code> (tanpa kata masuk/keluar dianggap dipakai)<br>' +
+    '<b>Kas (pengelola):</b> <code>bayar gaji 2jt</code> · <code>transfer 6,5jt pakan</code> · <code>obat 350rb tunai</code> (jumlah: 6500000 / 6,5jt / 500rb)<br>' +
+    '<b>Tanggal:</b> kata <code>kemarin</code> dalam baris, atau baris <code>tgl 25/10</code> berlaku untuk baris di bawahnya. Tanpa itu dipakai tanggal pesan WhatsApp (bila ikut tersalin) atau hari ini.</div></details>';
   showSheet(h);
   var ta = $('#wa-t');
-  $('#wa-contoh').addEventListener('click', function (e) { e.preventDefault(); ta.value = WA_CONTOH; waBaca(); });
+  $('#wa-contoh').addEventListener('click', function () { ta.value = WA_CONTOH; waBaca(); });
   $('#wa-baca').addEventListener('click', waBaca);
-  $('#wa-ai').addEventListener('click', waBacaAi);
   $('#wa-tempel').addEventListener('click', async function () {
-    try { var t = await navigator.clipboard.readText(); if (t) { ta.value = t; $('#wa-prev').innerHTML = '<p class="muted small">Pesan ditempel. Klik Baca dengan AI atau Baca cepat.</p>'; } else toast('Clipboard kosong', 'warn'); }
+    try { var t = await navigator.clipboard.readText(); if (t) { ta.value = t; $('#wa-prev').innerHTML = '<p class="muted small">Pesan ditempel. Klik Baca pesan.</p>'; } else toast('Clipboard kosong', 'warn'); }
     catch (e) { toast('Izin clipboard ditolak. Tempel manual di kotak.', 'warn'); ta.focus(); }
   });
   ta.focus();
 }
 var WA_RES = [];
 function waBaca() { waTampil(waParse($('#wa-t').value, waCtx()), false); }
-async function waBacaAi() {
-  var teks = $('#wa-t').value.trim(), box = $('#wa-prev');
-  if (!teks) { box.innerHTML = '<p class="muted small">Tempel pesan dulu.</p>'; return; }
-  var b = $('#wa-ai'); b.disabled = true; b.textContent = 'AI membaca…'; box.innerHTML = '<p class="muted small">Memahami pesan…</p>';
-  try {
-    var r = await api('wa_aiBaca', S.pin, teks);
-    if (r.pinSalah) { logout('PIN sudah berubah. Masuk lagi.'); return; }
-    if (!r.ok) { box.innerHTML = '<p class="neg small">' + esc(r.error || 'AI gagal') + '</p><p class="muted small">Anda tetap bisa pakai <b>Baca cepat</b> dengan format baku.</p>'; return; }
-    waTampil(waDariAi(r.records, r.tidakJelas, waCtx()), true);
-  } catch (e) { box.innerHTML = '<p class="neg small">Tidak terhubung ke server. Coba lagi, atau pakai <b>Baca cepat</b>.</p>'; }
-  finally { b.disabled = false; b.textContent = 'Baca dengan AI'; }
-}
 function waTampil(res, ai) {
   var box = $('#wa-prev'); WA_RES = res;
-  if (!res.length) { box.innerHTML = '<p class="muted small">' + (ai ? 'AI tidak menemukan data yang bisa dicatat di pesan ini.' : 'Belum ada isi.') + '</p>'; return; }
+  if (!res.length) { box.innerHTML = '<p class="muted small">' + 'Belum ada isi.' + '</p>'; return; }
   var ok = res.filter(function (r) { return !r.err; }).length, bad = res.length - ok;
   var JN = { timbang: 'Timbang', kondisi: 'Kondisi', pakan: 'Pakan', keuangan: 'Kas', tgl: 'Tanggal', tak: '?' };
-  box.innerHTML = '<div class="muted small" style="margin:4px 0 6px">' + (ai ? 'Dibaca AI. <b>Periksa dulu</b> sebelum menyimpan. ' : '') + '<b>' + ok + '</b> siap disimpan' + (bad ? ' · <b class="neg">' + bad + ' perlu diperbaiki</b>' : '') + '</div>' +
+  box.innerHTML = '<div class="muted small" style="margin:4px 0 6px">' + '<b>' + ok + '</b> siap disimpan' + (bad ? ' · <b class="neg">' + bad + ' perlu diperbaiki</b>' : '') + '</div>' +
     res.map(function (r) {
       return '<div class="row" style="align-items:flex-start;gap:8px"><div class="a" style="min-width:0"><b>' + esc(JN[r.jenis] || '') + ' · ' + esc(r.tanggal) + '</b>' +
-        '<span>' + (r.err ? '<span class="neg">' + esc(r.err) + '</span><br><span class="muted">' + esc(r.line) + '</span>' : esc(r.label) + (r.warn ? '<br><span style="color:#b5530a">Cek: ' + esc(r.warn) + '</span>' : '') + (r.ai && r.line ? '<br><span class="muted">“' + esc(r.line) + '”</span>' : '')) + '</span></div></div>';
+        '<span>' + (r.err ? '<span class="neg">' + esc(r.err) + '</span><br><span class="muted">' + esc(r.line) + '</span>' : esc(r.label) + (r.warn ? '<br><span style="color:#b5530a">Cek: ' + esc(r.warn) + '</span>' : '') + '') + '</span></div></div>';
     }).join('') +
     '<button class="btn" type="button" id="wa-simpan" style="width:100%;margin-top:10px"' + (ok ? '' : ' disabled') + '>Simpan ' + ok + ' data</button>' +
     (bad ? '<p class="muted small">Baris yang salah tidak disimpan. Perbaiki di kotak lalu baca lagi.</p>' : '');
