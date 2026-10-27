@@ -1,8 +1,9 @@
 {
-  "name": "Qurbandong Farm",
-  "short_name": "Qurbandong",
-  "description": "Pantau dan catat domba, pakan, dan keuangan Qurbandong Farm",
-  "start_url": "./index.html",
+  "id": "/qurbandong-app/?app=qdf-ternak",
+  "name": "QDF Ternak",
+  "short_name": "QDF Ternak",
+  "description": "Pantau dan catat domba, pakan, dan keuangan Qurbandong Farm (ternak)",
+  "start_url": "./index.html?source=pwa",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
