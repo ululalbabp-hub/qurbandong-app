@@ -71,7 +71,7 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:
 .login{min-height:100%;display:grid;place-items:center;padding-block:32px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .login-card{width:100%;max-width:380px;display:grid;gap:20px}
 .login-brand{display:flex;gap:14px;align-items:center}
-.login-brand svg{width:56px;height:56px;flex:none}
+.login-brand .logo{width:64px;height:64px;flex:none;border-radius:16px;background:#fff;box-shadow:var(--shadow)}
 .login-brand h1{font-size:26px;line-height:1.1}
 .login-brand p{margin:2px 0 0;color:var(--ink-2);font-size:13.5px}
 .login form{display:grid;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:20px;box-shadow:var(--shadow)}
@@ -82,7 +82,11 @@ h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
 .topbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:color-mix(in srgb,var(--surface) 92%,transparent);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
 .topbar-in{max-width:600px;margin:0 auto;display:flex;align-items:center;gap:10px;height:56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.topbar svg.logo{width:32px;height:32px;flex:none}
+.topbar .logo{width:34px;height:34px;flex:none;border-radius:9px;background:#fff}
+.srv{font-size:13px;color:var(--ink-2)}
+.srv summary{cursor:pointer;font-weight:600}
+.srv-in{display:grid;gap:8px;margin-top:8px}
+.srv-in .inp{font-size:13px}
 .brand-t{display:flex;flex-direction:column;line-height:1.15;min-width:0}
 .brand-t b{font-family:var(--f-display);font-size:17px;font-weight:800}
 .brand-t span{font-size:11.5px;color:var(--ink-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -348,7 +352,7 @@ const API_URL = (function () {
   if (IS_GAS) return '';
   try { const q = new URLSearchParams(location.search).get('api'); if (q && /^https:\/\/script\.google\.com\/.+\/exec$/.test(q)) { localStorage.setItem('qdf_api', q); return q; } } catch (e) {}
   let saved = null; try { saved = localStorage.getItem('qdf_api'); } catch (e) {}
-  return (window.QDF_CONFIG && window.QDF_CONFIG.apiUrl) || saved || '';
+  return saved || (window.QDF_CONFIG && window.QDF_CONFIG.apiUrl) || '';
 })();
 const DEMO = !IS_GAS && !API_URL && !!DEMO_DATA;
 const IMG_ACCEPT = 'image/' + String.fromCharCode(42);
@@ -400,9 +404,10 @@ const I = {
   phone: '<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>'
 };
 const ic = (n, cls = '') => `<span class="ic ${cls}" aria-hidden="true"><svg viewBox="0 0 24 24">${I[n]}</svg></span>`;
-const LOGO = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1d4a30"/><path d="M12 54c3-7 7-11 13-13" stroke="#8fc46a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M17 56c1-6 3-10 7-13" stroke="#6fae4c" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="31" cy="28" r="13.5" fill="none" stroke="#fff" stroke-width="7"/><path d="M36.5 36.5c5.5 1.5 10.5 6.5 13.5 14.5-8-.5-13.5-4.5-16.5-10.5z" fill="#e2ac46"/></svg>`;
+const LOGO_SVG = `<svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#1d4a30"/><path d="M12 54c3-7 7-11 13-13" stroke="#8fc46a" stroke-width="3" fill="none" stroke-linecap="round"/><path d="M17 56c1-6 3-10 7-13" stroke="#6fae4c" stroke-width="2.6" fill="none" stroke-linecap="round"/><circle cx="31" cy="28" r="13.5" fill="none" stroke="#fff" stroke-width="7"/><path d="M36.5 36.5c5.5 1.5 10.5 6.5 13.5 14.5-8-.5-13.5-4.5-16.5-10.5z" fill="#e2ac46"/></svg>`;
 
 // ---------- State ----------
+const LOGO = (!IS_GAS && !DEMO_DATA) ? '<img class="logo" src="icon-192.png" alt="Qurbandong Odot">' : LOGO_SVG;
 const S = {
   token: null, user: null, D: null, C: null, view: 'home', homeTab: 'keu', mutTab: 'kas',
   kasF: { bulan: '', kat: '', q: '', noBukti: false }, panF: { jenis: '' }, lahanF: { blok: '' }, mitF: { status: '' },
@@ -431,7 +436,7 @@ async function callFetch(action, payload) {
   let resp, r;
   try {
     resp = await fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, payload, token: S.token }), redirect: 'follow' });
-  } catch (e) { throw new Error('Tidak bisa menghubungi server. Periksa internet, lalu coba lagi.'); }
+  } catch (e) { const er = new Error('Tidak bisa menghubungi server. Penyebab umum: alamat server salah, akses deployment bukan "Siapa saja", atau Code.gs terbaru belum di-deploy sebagai Versi baru.'); er.net = true; throw er; }
   try { r = await resp.json(); } catch (e) { throw new Error('Server belum siap. Pastikan Code.gs terbaru sudah di-deploy sebagai Versi baru.'); }
   return new Promise((res, rej) => handleResult(r, res, rej));
 }
@@ -608,6 +613,7 @@ function renderLogin(msg) {
       <label class="check"><input type="checkbox" id="lr" name="remember" checked><span>Ingat saya di perangkat ini (30 hari)</span></label>
       <div id="loginErr"></div>
       <button class="btn primary block" type="submit">Masuk</button>
+      ${!IS_GAS && !DEMO ? `<details class="srv" id="srvBox"><summary>Alamat server</summary><div class="srv-in"><input class="inp" id="srvUrl" value="${esc(API_URL)}" placeholder="https://script.google.com/macros/s/…/exec" autocapitalize="none" spellcheck="false"><button type="button" class="btn ghost sm" data-act="saveSrv">Simpan alamat server</button><span class="hint">Salin dari Apps Script: Terapkan → Kelola deployment → URL aplikasi web.</span></div></details>` : ''}
       ${DEMO ? `<div class="demo-quick"><button type="button" class="btn ghost sm" data-act="demoLogin" data-u="admin">Coba sebagai Pengelola</button><button type="button" class="btn ghost sm" data-act="demoLogin" data-u="investor">Coba sebagai Investor</button></div>` : ''}
     </form>
     <p class="login-foot">Pengelola: input & edit data · Investor: pantau laporan.<br>Lupa password? Hubungi pengelola Qurbandong Farm.</p>
@@ -1084,7 +1090,12 @@ const ACT = {
   refresh: async t => { t.disabled = true; await refresh('Data diperbarui'); },
   logout: () => signOut(),
   demoLogin: async t => { try { await doLogin(t.dataset.u, 'demo', true); } catch (e) { $('#loginErr').innerHTML = `<div class="err">${esc(e.message)}</div>`; } },
-  userForm: t => userForm(t.dataset.u)
+  userForm: t => userForm(t.dataset.u),
+  saveSrv: () => {
+    const v = String($('#srvUrl').value || '').trim();
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(v)) { $('#loginErr').innerHTML = '<div class="err">Alamat harus berbentuk https://script.google.com/macros/s/…/exec</div>'; return; }
+    store.set('qdf_api', v); location.reload();
+  }
 };
 document.addEventListener('click', e => {
   const t = e.target.closest('[data-act]'); if (!t) return;
@@ -1099,7 +1110,7 @@ document.addEventListener('submit', async e => {
     const f = new FormData(form), btn = $('button[type="submit"]', form), box = $('#loginErr');
     box.innerHTML = ''; btn.disabled = true; btn.textContent = 'Memeriksa…';
     try { await doLogin(String(f.get('username')).trim(), f.get('password'), !!f.get('remember')); }
-    catch (err) { box.innerHTML = `<div class="err">${esc(err.message)}</div>`; btn.disabled = false; btn.textContent = 'Masuk'; }
+    catch (err) { box.innerHTML = `<div class="err">${esc(err.message)}</div>`; btn.disabled = false; btn.textContent = 'Masuk'; if (err.net && $('#srvBox')) $('#srvBox').open = true; }
     return;
   }
   if (on === 'changePw') {
