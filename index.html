@@ -2704,7 +2704,10 @@ var API_URL = (window.QF_CONFIG && window.QF_CONFIG.apiUrl) || store.get('qf_api
 var URL_OK = /^https:\/\/script\.google(usercontent)?\.com\//;
 function inAppsScript() { return !!(window.google && google.script && google.script.run); }
 function needServer() { return !inAppsScript() && !API_URL; }
-var MSG_SERVER_LAMA = 'Server belum diperbarui. Di Apps Script: tempel WebApp.gs terbaru, lalu Deploy › Kelola deployment › ikon pensil › Versi: Versi baru › Deploy.';
+function msgServerLama() {
+  var id = ''; try { var mm = /\/s\/([^\/]+)\/exec/.exec(API_URL || ''); if (mm) id = mm[1]; } catch (e) { /* abaikan */ }
+  return 'Server yang dipakai aplikasi ini belum berisi kode terbaru.' + (id ? '\n\nAlamat server HP ini berakhiran: …' + id.slice(-10) + '\nDi Apps Script › Deploy › Kelola deployment, pastikan deployment dengan ID berakhiran itulah yang Anda edit › Versi baru › Deploy. Jika Anda membuat "Deployment baru", alamatnya berubah: salin alamat /exec yang baru, lalu buka aplikasi lewat https://ululalbabp-hub.github.io/qurbandong-app/?api=ALAMAT_EXEC_BARU.' : '\n\nDi Apps Script: Deploy › Kelola deployment › ikon pensil › Versi baru › Deploy.');
+}
 function api(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   return new Promise(function (resolve, reject) {
@@ -2714,7 +2717,7 @@ function api(fn) {
       var run = google.script.run
         .withSuccessHandler(function (r) { if (!done) { done = true; clearTimeout(t0); resolve(r); } })
         .withFailureHandler(function (e) { if (!done) { done = true; clearTimeout(t0); reject(e); } });
-      if (typeof run[fn] !== 'function') { done = true; clearTimeout(t0); resolve({ ok: false, error: MSG_SERVER_LAMA }); return; }
+      if (typeof run[fn] !== 'function') { done = true; clearTimeout(t0); resolve({ ok: false, error: msgServerLama() }); return; }
       run[fn].apply(run, args);
       return;
     }
@@ -2723,7 +2726,7 @@ function api(fn) {
     var t = setTimeout(function () { if (ctl) ctl.abort(); reject(new Error('timeout')); }, 45000);
     fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow', signal: ctl ? ctl.signal : undefined })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (j) { clearTimeout(t); if (j && j.ok === false && /Fungsi tidak dikenal/.test(String(j.error))) j.error = MSG_SERVER_LAMA; resolve(j); })
+      .then(function (j) { clearTimeout(t); if (j && j.ok === false && /Fungsi tidak dikenal/.test(String(j.error))) j.error = msgServerLama(); resolve(j); })
       .catch(function (e) { clearTimeout(t); reject(e); });
   });
 }

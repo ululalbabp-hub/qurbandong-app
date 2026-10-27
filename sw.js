@@ -1,5 +1,5 @@
 /* Service worker Qurbandong: cangkang aplikasi tetap bisa dibuka tanpa sinyal. */
-const CACHE = 'qf-v33';
+const CACHE = 'qf-v34';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './config.js', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));
