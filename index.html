@@ -2751,7 +2751,8 @@ function toast(msg, type) {
   clearTimeout(toastT); toastT = setTimeout(function () { el.className = 'toast'; }, type === 'err' || type === 'warn' ? 5200 : 2400);
 }
 function showSheet(html) { $('#sheetBody').innerHTML = html; $('#sheet').hidden = false; }
-function closeSheet() { $('#sheet').hidden = true; }
+var KONTAK_WAJIB = false;
+function closeSheet() { if (KONTAK_WAJIB) return; $('#sheet').hidden = true; }
 function setSync(state) {
   S.sync = state;
   var t = '';
@@ -2851,11 +2852,35 @@ function setupNav() {
   $('#navInvT').textContent = inv ? 'Portofolio' : 'Investor';
   $('#ttl').textContent = inv ? (S.investor || S.nama) : S.nama;
 }
+/* Investor wajib melengkapi email dan no. telepon sebelum memakai aplikasi. */
+function kontakWajib(k) {
+  if (KONTAK_WAJIB) return;
+  KONTAK_WAJIB = true;
+  showSheet('<h3>Lengkapi data kontak</h3><p class="muted small">Untuk menerima laporan bulanan PDF dan pemberitahuan domba Anda, mohon isi email dan nomor telepon/WhatsApp. Wajib diisi sebelum melanjutkan.</p>' +
+    '<label>Email</label><input type="email" id="kw-em" inputmode="email" autocomplete="email" placeholder="nama@gmail.com" value="' + esc((k && k.email) || '') + '">' +
+    '<label>No. telepon / WhatsApp</label><input type="tel" id="kw-tp" inputmode="tel" autocomplete="tel" placeholder="0812xxxxxxxx" value="' + esc((k && k.telp) || '') + '">' +
+    '<button class="btn" type="button" id="kw-ok" style="margin-top:14px">Simpan & lanjut</button><div id="kw-msg" class="err"></div>' +
+    '<button class="btn ghost" type="button" id="kw-out" style="margin-top:6px">Keluar</button>');
+  var tc = $('#sheetClose'); if (tc) tc.style.display = 'none';
+  $('#kw-out').addEventListener('click', function () { KONTAK_WAJIB = false; var t = $('#sheetClose'); if (t) t.style.display = ''; closeSheet(); logout(''); });
+  $('#kw-ok').addEventListener('click', async function () {
+    var em = $('#kw-em').value.trim(), tp = $('#kw-tp').value.trim(), m = $('#kw-msg');
+    if (!/^[^\s@,;]+@[^\s@,;]+\.[^\s@,;]{2,}$/.test(em)) { m.textContent = 'Email belum benar'; return; }
+    if (!/^\+?\d{8,15}$/.test(tp.replace(/[^\d+]/g, ''))) { m.textContent = 'No. telepon belum benar (8-15 angka)'; return; }
+    this.disabled = true; m.textContent = '';
+    try {
+      var r = await api('wa_inv_kontak', S.pin, { email: em, telp: tp });
+      if (!r || !r.ok) { m.textContent = (r && r.error) || 'Gagal menyimpan'; this.disabled = false; return; }
+      KONTAK_WAJIB = false; if (tc) tc.style.display = ''; closeSheet(); toast(r.pesan || 'Tersimpan', 'ok');
+    } catch (e) { m.textContent = 'Tidak ada sinyal. Coba lagi.'; this.disabled = false; }
+  });
+}
 async function loadInv() {
   var r = await api('wa_inv_ringkas', S.pin, S.role === 'admin' ? S.invPilih : '');
   if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return false; }
   if (!r.ok) { toast(r.error || 'Gagal memuat portofolio', 'err'); return false; }
   if (r.investors) S.invList = r.investors;
+  if (S.role === 'investor' && r.kontak && !r.kontak.lengkap) kontakWajib(r.kontak);
   S.inv = r.portofolio ? r : null;
   S.invRekap = r.rekap || null;
   return true;
