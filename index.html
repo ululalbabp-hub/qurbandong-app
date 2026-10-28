@@ -787,6 +787,16 @@ html[data-tema=dark] input,html[data-tema=dark] select,html[data-tema=dark] text
 html[data-tema=dark] .login{background:linear-gradient(160deg,#08290c 0%,#143d1b 55%,#2c4a35 100%)}
 html[data-tema=dark] .login input{background:#232625;color:#f4ede3}
 html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;color:#8fd69c}html[data-tema=dark] .c-WASPADA,html[data-tema=dark] .c-Sakit{background:#43301c;color:#f2b45c}
+/* saldo beranda */
+.saldo .saldo-h{background:linear-gradient(135deg,#0d4715 0%,#2f5a39 70%,#41644a 100%);color:#fff;padding:16px 16px 14px;border-bottom:4px solid var(--pk,#e9762b);position:relative}
+.saldo .saldo-h .l{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:#ffe5c8;opacity:.95}
+.saldo .saldo-h .v{font-size:32px;font-weight:800;line-height:1.15;margin:4px 0 2px;font-variant-numeric:tabular-nums}
+.saldo .saldo-h .v.neg{color:#ffc9a8}.saldo .saldo-h .t{font-size:12px;color:#ffe5c8;opacity:.85}
+.saldo .saldo-b{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.saldo .saldo-b>div{padding:12px 16px}.saldo .saldo-b>div+div{border-left:1px solid var(--bd)}
+.saldo .saldo-b span{display:block;font-size:12px;color:var(--mu)}.saldo .saldo-b b{font-size:17px;font-variant-numeric:tabular-nums}
+.saldo .saldo-l{display:block;width:100%;border:0;border-top:1px solid var(--bd);background:transparent;color:var(--g);font:inherit;font-weight:700;font-size:14px;padding:12px;text-align:center}
+.saldo .saldo-l:active{background:var(--tint)}
 /* ===== BRAND QD END ===== */
 </style>
 </head>
@@ -2893,6 +2903,13 @@ function renderHome() {
   var d = r.domba, p = r.perf, h = '';
   h += '<div class="muted small" style="margin:2px 2px 8px">Per tanggal ' + esc(r.laporan) + (S.me && S.me.orang ? ' · masuk sebagai ' + esc(S.me.orang) : '') + '</div>';
   if (S.role === 'admin' && S.akunMenunggu) h += '<div class="card" style="border-color:#e9762b"><b>' + S.akunMenunggu + ' permintaan akun baru</b><div class="muted small">Ada orang yang mendaftar dan menunggu persetujuan Anda.</div><button class="btn" type="button" data-pengguna="1" style="margin-top:8px">Tinjau permintaan</button></div>';
+  if (r.saldo) {
+    var sd = r.saldo, nm = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'], mm = /^(\d{4})-(\d{2})/.exec(sd.bulan || '');
+    h += '<div class="card saldo" style="padding:0;overflow:hidden"><div class="saldo-h"><div class="l">Saldo kas terkini</div><div class="v ' + (sd.saldo < 0 ? 'neg' : '') + '">' + rp(sd.saldo) + '</div>' +
+         '<div class="t">' + (sd.terakhir ? 'Transaksi terakhir ' + esc(sd.terakhir) : 'Belum ada transaksi') + '</div></div>' +
+         '<div class="saldo-b"><div><span>Masuk ' + (mm ? nm[+mm[2] - 1] : 'bulan ini') + '</span><b class="pos">' + rp(sd.masuk) + '</b></div><div><span>Keluar ' + (mm ? nm[+mm[2] - 1] : 'bulan ini') + '</span><b class="neg">' + rp(sd.keluar) + '</b></div></div>' +
+         '<button type="button" class="saldo-l" data-go-mut>Lihat mutasi lengkap ›</button></div>';
+  }
   h += '<div class="grid2">';
   h += '<div class="kpi big"><div class="v">' + esc(d.aktif) + '</div><div class="l">Domba aktif (dari ' + esc(d.total) + ' tercatat)</div></div>';
   h += '<div class="kpi"><div class="v">' + esc(d.sehat) + '</div><div class="l">Sehat</div></div>';
@@ -2919,6 +2936,7 @@ function renderHome() {
   }
   el.innerHTML = h;
   $$('[data-pengguna]', el).forEach(function (b) { b.addEventListener('click', akunPengguna); });
+  $$('[data-go-mut]', el).forEach(function (b) { b.addEventListener('click', function () { go('keu', 'mut'); }); });
   $$('[data-kdm]', el).forEach(function (b) { b.addEventListener('click', function () { S.kdm = b.getAttribute('data-kdm'); renderHome(); }); });
 }
 /** Grafik rata-rata per kandang (domba aktif): pilih Bobot / Kenaikan harian / Jumlah. Warna per blok. */
@@ -5301,22 +5319,25 @@ async function nPengaturan() {
   r.investors.forEach(function (x, i) {
     h += '<div class="ir" data-nama="' + esc(x.nama) + '"><h4>' + esc(x.nama) + (x.batch ? ' <span class="st">· ' + esc(x.batch) + '</span>' : '') + '</h4>' +
          '<input type="email" class="ns-em" placeholder="email investor" value="' + esc(x.email) + '" autocomplete="off">' +
+         '<input type="tel" class="ns-tp" inputmode="tel" placeholder="No. telepon / WhatsApp (mis. 0812xxxxxxx)" value="' + esc(x.telp || '') + '" autocomplete="off" style="margin-top:6px">' +
+         '<input type="text" class="ns-pn" placeholder="' + (x.punyaPin ? 'Sandi login sudah ada. Isi hanya untuk menggantinya' : 'Sandi login investor (6-12 huruf/angka)') + '" autocomplete="off" autocapitalize="off" style="margin-top:6px">' +
          '<label class="sw"><input type="checkbox" class="ns-nt"' + (x.notif ? ' checked' : '') + '> Kirim email pemberitahuan (domba masuk, timbang, perubahan)</label>' +
          (x.status ? '<div class="st">Laporan ' + esc(bulanLabel(r.bulanLalu)) + ': ' + esc(x.status === 'ok' ? 'sudah terkirim' : x.status) + '</div>' : '') +
          '<div class="bt"><button type="button" class="btn ghost ns-kirim">Kirim PDF ke email</button><button type="button" class="btn ghost ns-unduh">Unduh / bagikan PDF</button></div></div>';
   });
-  h += '<button class="btn" type="button" id="ns-simpan" style="margin-top:12px">Simpan email</button>' +
+  h += '<button class="btn" type="button" id="ns-simpan" style="margin-top:12px">Simpan email, telepon & sandi</button>' +
        '<div class="bt"><button type="button" class="btn ghost" id="ns-semua">Kirim PDF ke semua investor</button><button type="button" class="btn ghost" id="ns-uji">Kirim contoh ke email saya</button></div>' +
        '<div id="ns-msg" class="err" style="margin-top:8px"></div><p class="muted small">Email dikirim dari akun Google pemilik skrip. Laporan PDF memuat ringkasan portofolio, hasil timbang bulan itu, perubahan, biaya, dan perkiraan bagi hasil.</p></div>';
   showSheet(h);
   var msg = function (t, ok) { var m = $('#ns-msg'); m.className = ok ? 'ok' : 'err'; m.textContent = t; };
   var kumpul = function () {
-    var inv = {}; $$('.ir', $('#sheetBody')).forEach(function (row) { inv[row.getAttribute('data-nama')] = { email: row.querySelector('.ns-em').value.trim(), notif: row.querySelector('.ns-nt').checked }; });
+    var inv = {}; $$('.ir', $('#sheetBody')).forEach(function (row) { inv[row.getAttribute('data-nama')] = { email: row.querySelector('.ns-em').value.trim(), telp: row.querySelector('.ns-tp').value.trim(), pin: row.querySelector('.ns-pn').value.trim(), notif: row.querySelector('.ns-nt').checked }; });
     return { adminEmail: $('#ns-adm').value.trim(), investors: inv };
   };
   var simpan = async function () {
     var res = await api('wa_notifSet', S.pin, kumpul());
     if (!res || !res.ok) { msg((res && res.error) || 'Gagal menyimpan'); return false; }
+    $$('.ns-pn', $('#sheetBody')).forEach(function (i) { if (i.value) { i.value = ''; i.placeholder = 'Sandi login sudah ada. Isi hanya untuk menggantinya'; } });
     return true;
   };
   var jd2 = $('#ns-jadwal'); if (jd2) jd2.addEventListener('click', async function () {
