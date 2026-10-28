@@ -814,7 +814,7 @@ html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;co
     <button id="btnLogin" class="btn" type="button">Masuk</button>
     <div id="loginErr" class="err"></div>
     <button id="goSignup" class="lnk" type="button">Belum punya akun? Daftar</button>
-    <div class="muted small" style="margin-top:6px">Investor: kosongkan nama pengguna, isi PIN dari pengelola.</div>
+    <div class="muted small" style="margin-top:6px">Investor: masuk dengan nama pengguna dan sandi dari pengelola.</div>
   </div>
   <div id="signupBox" class="lbox" hidden>
     <p class="muted">Daftar akun baru. Pengelola perlu menyetujui sebelum Anda bisa masuk.</p>
@@ -5319,19 +5319,20 @@ async function nPengaturan() {
   r.investors.forEach(function (x, i) {
     h += '<div class="ir" data-nama="' + esc(x.nama) + '"><h4>' + esc(x.nama) + (x.batch ? ' <span class="st">· ' + esc(x.batch) + '</span>' : '') + '</h4>' +
          '<input type="email" class="ns-em" placeholder="email investor" value="' + esc(x.email) + '" autocomplete="off">' +
+         '<input type="text" class="ns-us" placeholder="Nama pengguna login (huruf kecil/angka, 3-20)" value="' + esc(x.user || '') + '" autocomplete="off" autocapitalize="off" spellcheck="false" style="margin-top:6px">' +
          '<input type="tel" class="ns-tp" inputmode="tel" placeholder="No. telepon / WhatsApp (mis. 0812xxxxxxx)" value="' + esc(x.telp || '') + '" autocomplete="off" style="margin-top:6px">' +
          '<input type="text" class="ns-pn" placeholder="' + (x.punyaPin ? 'Sandi login sudah ada. Isi hanya untuk menggantinya' : 'Sandi login investor (6-12 huruf/angka)') + '" autocomplete="off" autocapitalize="off" style="margin-top:6px">' +
          '<label class="sw"><input type="checkbox" class="ns-nt"' + (x.notif ? ' checked' : '') + '> Kirim email pemberitahuan (domba masuk, timbang, perubahan)</label>' +
          (x.status ? '<div class="st">Laporan ' + esc(bulanLabel(r.bulanLalu)) + ': ' + esc(x.status === 'ok' ? 'sudah terkirim' : x.status) + '</div>' : '') +
          '<div class="bt"><button type="button" class="btn ghost ns-kirim">Kirim PDF ke email</button><button type="button" class="btn ghost ns-unduh">Unduh / bagikan PDF</button></div></div>';
   });
-  h += '<button class="btn" type="button" id="ns-simpan" style="margin-top:12px">Simpan email, telepon & sandi</button>' +
+  h += '<button class="btn" type="button" id="ns-simpan" style="margin-top:12px">Simpan data investor</button>' +
        '<div class="bt"><button type="button" class="btn ghost" id="ns-semua">Kirim PDF ke semua investor</button><button type="button" class="btn ghost" id="ns-uji">Kirim contoh ke email saya</button></div>' +
        '<div id="ns-msg" class="err" style="margin-top:8px"></div><p class="muted small">Email dikirim dari akun Google pemilik skrip. Laporan PDF memuat ringkasan portofolio, hasil timbang bulan itu, perubahan, biaya, dan perkiraan bagi hasil.</p></div>';
   showSheet(h);
   var msg = function (t, ok) { var m = $('#ns-msg'); m.className = ok ? 'ok' : 'err'; m.textContent = t; };
   var kumpul = function () {
-    var inv = {}; $$('.ir', $('#sheetBody')).forEach(function (row) { inv[row.getAttribute('data-nama')] = { email: row.querySelector('.ns-em').value.trim(), telp: row.querySelector('.ns-tp').value.trim(), pin: row.querySelector('.ns-pn').value.trim(), notif: row.querySelector('.ns-nt').checked }; });
+    var inv = {}; $$('.ir', $('#sheetBody')).forEach(function (row) { inv[row.getAttribute('data-nama')] = { email: row.querySelector('.ns-em').value.trim(), user: row.querySelector('.ns-us').value.trim().toLowerCase(), telp: row.querySelector('.ns-tp').value.trim(), pin: row.querySelector('.ns-pn').value.trim(), notif: row.querySelector('.ns-nt').checked }; });
     return { adminEmail: $('#ns-adm').value.trim(), investors: inv };
   };
   var simpan = async function () {
