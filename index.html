@@ -797,6 +797,12 @@ html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;co
 .saldo .saldo-b span{display:block;font-size:12px;color:var(--mu)}.saldo .saldo-b b{font-size:17px;font-variant-numeric:tabular-nums}
 .saldo .saldo-l{display:block;width:100%;border:0;border-top:1px solid var(--bd);background:transparent;color:var(--g);font:inherit;font-weight:700;font-size:14px;padding:12px;text-align:center}
 .saldo .saldo-l:active{background:var(--tint)}
+.hp .hp-i{margin:10px 0}.hp .hp-h{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:2px}.hp .hp-v{font-size:20px;font-variant-numeric:tabular-nums}
+.hp .hp-raw{background:var(--sunk);border-radius:10px;padding:8px 10px;margin-top:4px;word-break:break-word;font-size:12.5px;color:var(--mu)}
+.hp .bt{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}.hp .bt .btn{width:auto;margin:0;padding:10px 16px;font-size:14px;flex:1}
+.hp textarea{width:100%;padding:10px;border:1.5px solid var(--bd);border-radius:12px;font:inherit;background:var(--card);color:var(--tx)}
+.hp .hp-ol{padding-left:18px;margin:8px 0;line-height:1.5}.hp .hp-ol code{background:var(--sunk);padding:1px 5px;border-radius:5px}
+.hp select{width:100%;padding:11px;border:1.5px solid var(--bd);border-radius:12px;font:inherit;background:var(--card);color:var(--tx)}
 /* ===== BRAND QD END ===== */
 </style>
 </head>
@@ -2928,6 +2934,7 @@ function renderHome() {
   var d = r.domba, p = r.perf, h = '';
   h += '<div class="muted small" style="margin:2px 2px 8px">Per tanggal ' + esc(r.laporan) + (S.me && S.me.orang ? ' · masuk sebagai ' + esc(S.me.orang) : '') + '</div>';
   if (S.role === 'admin' && S.akunMenunggu) h += '<div class="card" style="border-color:#e9762b"><b>' + S.akunMenunggu + ' permintaan akun baru</b><div class="muted small">Ada orang yang mendaftar dan menunggu persetujuan Anda.</div><button class="btn" type="button" data-pengguna="1" style="margin-top:8px">Tinjau permintaan</button></div>';
+  if (S.role === 'admin' && r.hpMenunggu) h += '<div class="card" style="border-color:var(--pk,#e9762b);border-width:2px"><b>' + r.hpMenunggu + ' notifikasi uang menunggu dicatat</b><div class="muted small">Dari notifikasi bank di HP. Pilih kategori lalu catat, atau tolak.</div><button type="button" class="btn sm" data-hp style="margin-top:8px">Tinjau sekarang</button></div>';
   if (r.saldo) {
     var sd = r.saldo, nm = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'], mm = /^(\d{4})-(\d{2})/.exec(sd.bulan || '');
     h += '<div class="card saldo" style="padding:0;overflow:hidden"><div class="saldo-h"><div class="l">Saldo kas terkini</div><div class="v ' + (sd.saldo < 0 ? 'neg' : '') + '">' + rp(sd.saldo) + '</div>' +
@@ -2961,6 +2968,7 @@ function renderHome() {
   }
   el.innerHTML = h;
   $$('[data-pengguna]', el).forEach(function (b) { b.addEventListener('click', akunPengguna); });
+  $$('[data-hp]', el).forEach(function (b) { b.addEventListener('click', hpBuka); });
   $$('[data-go-mut]', el).forEach(function (b) { b.addEventListener('click', function () { go('keu', 'mut'); }); });
   $$('[data-kdm]', el).forEach(function (b) { b.addEventListener('click', function () { S.kdm = b.getAttribute('data-kdm'); renderHome(); }); });
 }
@@ -5142,6 +5150,7 @@ function showMenu() {
     '<div class="row" style="align-items:center"><span>Tampilan</span><span class="mut-f" style="margin:0">' + [['auto', 'Otomatis'], ['terang', 'Terang'], ['gelap', 'Gelap']].map(function (x) { return '<button type="button" data-tema-set="' + x[0] + '" class="' + (temaPilihan() === x[0] ? 'on' : '') + '">' + x[1] + '</button>'; }).join('') + '</span></div>' +
     '<p class="muted small" style="margin:2px 0 6px">Otomatis: terang pukul 06.00-17.59, gelap malam hari.</p>' +
     (me.user ? '<button class="btn ghost" type="button" id="mSandi">Ganti kata sandi</button>' : '') +
+    (adm ? '<button class="btn ghost" type="button" id="mHp">Notifikasi bank (BCA)</button>' : '') +
     (adm ? '<button class="btn ghost" type="button" id="mNset">Pengaturan notifikasi & laporan email</button>' : '') +
     (adm ? '<button class="btn ghost" type="button" id="mUser">Kelola pengguna' + (S.akunMenunggu ? ' (' + S.akunMenunggu + ' menunggu)' : '') + '</button>' : '') +
     '<button class="btn ghost" type="button" id="mQ">Lihat antrian</button><button class="btn" type="button" id="mOut" style="background:#9c0006">Keluar</button>');
@@ -5150,6 +5159,7 @@ function showMenu() {
   var ms = $('#mSandi'); if (ms) ms.addEventListener('click', akunSandi);
   var mu = $('#mUser'); if (mu) mu.addEventListener('click', akunPengguna);
   var mn = $('#mNset'); if (mn) mn.addEventListener('click', nPengaturan);
+  var mh = $('#mHp'); if (mh) mh.addEventListener('click', hpBuka);
   $('#mQ').addEventListener('click', showQueue);
   $('#mOut').addEventListener('click', function () {
     if (qGet().length && !confirm('Masih ada data antrian yang belum terkirim. Keluar tetap menyimpannya di HP ini. Lanjut keluar?')) return;
@@ -5327,6 +5337,110 @@ async function nUnduhPdf(nama, bulan, tombol) {
     toast('PDF ' + r.nama + ' tersimpan', 'ok');
   } catch (e) { toast('Tidak ada sinyal. Coba lagi.', 'err'); }
   finally { if (tombol) tombol.disabled = false; }
+}
+/* ---------------- notifikasi bank (BCA) dari HP -> antrean konfirmasi ---------------- */
+function hpOpsi(arr, pilih, kosong) { return (kosong ? '<option value="">' + esc(kosong) + '</option>' : '') + (arr || []).map(function (k) { return '<option' + (k === pilih ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join(''); }
+async function hpBuka() {
+  if (S.role !== 'admin') return;
+  showSheet('<h3>Notifikasi bank</h3><p class="muted small">Memuat…</p>');
+  var r; try { r = await api('wa_hp_antrean', S.pin); } catch (e) { showSheet('<h3>Notifikasi bank</h3><p class="muted small">Tidak ada sinyal.</p>'); return; }
+  if (!r || !r.ok) { showSheet('<h3>Notifikasi bank</h3><p class="neg small">' + esc((r && r.error) || 'Gagal') + '</p>'); return; }
+  var h = '<h3>Notifikasi bank</h3><div class="hp">';
+  h += '<div class="muted small">' + (r.rek ? 'Hanya rekening berakhiran <b>' + esc(r.rek) + '</b> yang dicatat.' : 'Semua rekening dicatat (belum diatur).') + ' Setiap notifikasi menunggu persetujuan Anda sebelum masuk ke Keuangan.</div>';
+  if (!r.menunggu.length) h += '<div class="card" style="margin:10px 0"><b>Tidak ada yang menunggu.</b><div class="muted small">Notifikasi uang masuk/keluar dari HP akan muncul di sini.</div></div>';
+  r.menunggu.forEach(function (x) {
+    var arah = x.arah || '', sar = x.saran || {};
+    h += '<div class="hp-i card" data-id="' + x.id + '" data-jml="' + x.jumlah + '">' +
+      '<div class="hp-h"><span class="chip ' + (arah === 'masuk' ? 'c-Sehat' : arah === 'keluar' ? 'c-Sakit' : 'c-x') + '">' + (arah === 'masuk' ? 'Uang masuk' : arah === 'keluar' ? 'Uang keluar' : 'Arah belum jelas') + '</span><b class="hp-v">' + rp(x.jumlah) + '</b></div>' +
+      '<div class="muted small">' + esc(x.w) + (x.pihak ? ' · ' + (arah === 'keluar' ? 'ke ' : 'dari ') + esc(x.pihak) : '') + (x.rek ? ' · rek …' + esc(x.rek) : '') + '</div>' +
+      (x.catatan ? '<div class="small" style="color:var(--warn)">' + esc(x.catatan) + '</div>' : '') +
+      '<details class="small"><summary class="muted">Teks asli notifikasi</summary><div class="hp-raw">' + esc(x.teks) + '</div></details>' +
+      (arah ? '' : '<label>Arah</label><select class="hp-arah"><option value="">Pilih…</option><option value="masuk">Uang masuk</option><option value="keluar">Uang keluar</option></select>') +
+      '<label>Kategori</label><select class="hp-kat">' + hpOpsi(arah === 'keluar' ? r.kategoriKeluar : r.kategoriMasuk, sar.kategori, 'Pilih kategori…') + '</select>' +
+      '<label>Pemilik / investor (jika setoran modal)</label><select class="hp-pem">' + hpOpsi(r.investor, sar.pemilik, '(tidak ada)') + '</select>' +
+      '<label>Keterangan</label><input type="text" class="hp-ket" value="' + esc(x.pihak) + '" maxlength="120">' +
+      '<label>Tanggal</label><input type="date" class="hp-tgl" value="' + esc((x.w || '').slice(0, 10)) + '">' +
+      '<div class="bt"><button type="button" class="btn hp-ok">Catat ke Keuangan</button><button type="button" class="btn ghost hp-no">Tolak</button></div><div class="err hp-msg"></div></div>';
+  });
+  if (r.abaikan.length) {
+    h += '<h4 style="margin:14px 0 4px">Diabaikan (rekening lain)</h4>';
+    r.abaikan.forEach(function (x) { h += '<div class="row" data-ab="' + x.id + '"><div class="a"><b>' + rp(x.jumlah) + ' · ' + esc(x.arah || '?') + '</b><span>' + esc(x.w) + ' · ' + esc(x.catatan) + '</span></div><button type="button" class="btn ghost sm hp-pul">Tetap catat</button></div>'; });
+  }
+  if (r.riwayat.length) {
+    h += '<h4 style="margin:14px 0 4px">Riwayat terakhir</h4>';
+    r.riwayat.forEach(function (x) { h += '<div class="row"><div class="a"><b>' + rp(x.jumlah) + ' · ' + esc(x.arah || '?') + '</b><span>' + esc(x.w) + ' · ' + esc(x.status === 'dicatat' ? x.catatan : 'ditolak') + (x.oleh ? ' · ' + esc(x.oleh) : '') + '</span></div></div>'; });
+  }
+  h += '<div class="bt" style="margin-top:12px"><button type="button" class="btn ghost" id="hp-set">Pengaturan & uji baca</button></div></div>';
+  showSheet(h);
+  var body = $('#sheetBody');
+  $('#hp-set').addEventListener('click', hpPengaturan);
+  $$('.hp-i', body).forEach(function (card) {
+    var id = Number(card.getAttribute('data-id')), msg = card.querySelector('.hp-msg');
+    var sa = card.querySelector('.hp-arah');
+    if (sa) sa.addEventListener('change', function () { card.querySelector('.hp-kat').innerHTML = hpOpsi(sa.value === 'keluar' ? r.kategoriKeluar : r.kategoriMasuk, '', 'Pilih kategori…'); });
+    card.querySelector('.hp-ok').addEventListener('click', async function () {
+      var kat = card.querySelector('.hp-kat').value; if (!kat) { msg.textContent = 'Pilih kategori dulu'; return; }
+      var arah = sa ? sa.value : ''; if (sa && !arah) { msg.textContent = 'Pilih arah dulu'; return; }
+      this.disabled = true; msg.textContent = '';
+      try {
+        var x = await api('wa_hp_proses', S.pin, id, 'setuju', { kategori: kat, arah: arah, pemilik: card.querySelector('.hp-pem').value, ket: card.querySelector('.hp-ket').value, tanggal: card.querySelector('.hp-tgl').value });
+        if (!x || !x.ok) { msg.textContent = (x && x.error) || 'Gagal'; this.disabled = false; return; }
+        toast(x.pesan || 'Tercatat', 'ok'); hpKurangi(); hpBuka();
+      } catch (e) { msg.textContent = 'Tidak ada sinyal. Coba lagi.'; this.disabled = false; }
+    });
+    card.querySelector('.hp-no').addEventListener('click', async function () {
+      if (!confirm('Tolak notifikasi ini? Tidak akan dicatat ke Keuangan.')) return;
+      try { var x = await api('wa_hp_proses', S.pin, id, 'tolak', {}); if (x && x.ok) { hpKurangi(); hpBuka(); } else msg.textContent = (x && x.error) || 'Gagal'; } catch (e) { msg.textContent = 'Tidak ada sinyal'; }
+    });
+  });
+  $$('.hp-pul', body).forEach(function (b) { b.addEventListener('click', async function () {
+    try { var x = await api('wa_hp_proses', S.pin, Number(b.closest('[data-ab]').getAttribute('data-ab')), 'pulihkan', {}); if (x && x.ok) hpBuka(); else toast((x && x.error) || 'Gagal', 'err'); } catch (e) { toast('Tidak ada sinyal', 'err'); }
+  }); });
+}
+function hpKurangi() { if (S.ringkas && S.ringkas.hpMenunggu) { S.ringkas.hpMenunggu--; try { renderHome(); } catch (e) { /* abaikan */ } } }
+async function hpPengaturan() {
+  showSheet('<h3>Pengaturan notifikasi bank</h3><p class="muted small">Memuat…</p>');
+  var r; try { r = await api('wa_hp_cfg', S.pin); } catch (e) { showSheet('<h3>Pengaturan notifikasi bank</h3><p class="muted small">Tidak ada sinyal.</p>'); return; }
+  if (!r || !r.ok) { showSheet('<h3>Pengaturan notifikasi bank</h3><p class="neg small">' + esc((r && r.error) || 'Gagal') + '</p>'); return; }
+  var link = r.token ? (r.url || API_URL || '') + '?hp=1&token=' + r.token + '&teks=' : '';
+  var h = '<h3>Pengaturan notifikasi bank</h3><div class="hp">' +
+    '<label>4 digit terakhir nomor rekening BCA yang dicatat</label><input type="text" id="hp-rek" inputmode="numeric" maxlength="4" placeholder="mis. 7890" value="' + esc(r.rek) + '">' +
+    '<div class="muted small">Notifikasi rekening lain otomatis diabaikan. Kosongkan untuk mencatat semua rekening.</div>' +
+    '<div class="bt"><button type="button" class="btn" id="hp-simpan">Simpan rekening</button></div>' +
+    '<h4 style="margin:14px 0 4px">Sambungkan ke HP (Android)</h4>';
+  if (!r.token) h += '<p class="muted small">Buat token rahasia dulu. Token dipakai aplikasi otomasi di HP untuk mengirim notifikasi ke sini.</p><div class="bt"><button type="button" class="btn" id="hp-token">Buat token</button></div>';
+  else h += '<label>Alamat kiriman (rahasia, jangan dibagikan)</label><textarea id="hp-link" rows="4" readonly style="font-size:12px">' + esc(link) + '</textarea>' +
+    '<div class="bt"><button type="button" class="btn ghost" id="hp-salin">Salin alamat</button><button type="button" class="btn ghost" id="hp-token">Ganti token</button></div>' +
+    '<ol class="small hp-ol"><li>Pasang <b>MacroDroid</b> (Play Store) dan izinkan akses notifikasi.</li>' +
+    '<li>Buat makro baru. <b>Pemicu</b>: Notifikasi diterima › pilih aplikasi <b>myBCA</b> / BCA mobile, isi notifikasi: kosong (semua).</li>' +
+    '<li><b>Aksi</b>: HTTP Request › metode GET › URL = alamat di atas, lalu tambahkan variabel <b>[not_text]</b> (isi notifikasi) tepat di belakang <code>teks=</code>. Centang "Encode URL".</li>' +
+    '<li>Simpan, aktifkan, lalu uji dengan transaksi kecil atau kotak uji di bawah.</li></ol>';
+  h += '<h4 style="margin:14px 0 4px">Uji baca teks notifikasi</h4><textarea id="hp-uji" rows="3" placeholder="Tempel isi notifikasi BCA di sini"></textarea>' +
+    '<div class="bt"><button type="button" class="btn ghost" id="hp-ujibtn">Uji baca (tidak menyimpan)</button></div><div id="hp-hasil" class="small" style="margin-top:6px"></div>' +
+    '<div class="err" id="hp-msg"></div><div class="bt"><button type="button" class="btn ghost" id="hp-kembali">‹ Kembali ke antrean</button></div></div>';
+  showSheet(h);
+  var msg = function (t, ok) { var m = $('#hp-msg'); m.className = ok ? 'ok' : 'err'; m.textContent = t; };
+  $('#hp-kembali').addEventListener('click', hpBuka);
+  $('#hp-simpan').addEventListener('click', async function () {
+    try { var x = await api('wa_hp_set', S.pin, { rek: $('#hp-rek').value.trim() }); if (x && x.ok) msg('Tersimpan', true); else msg((x && x.error) || 'Gagal'); } catch (e) { msg('Tidak ada sinyal'); }
+  });
+  var tk = $('#hp-token'); if (tk) tk.addEventListener('click', async function () {
+    if (r.token && !confirm('Ganti token? Makro di HP harus diperbarui dengan alamat baru, yang lama berhenti bekerja.')) return;
+    try { var x = await api('wa_hp_set', S.pin, { tokenBaru: true }); if (x && x.ok) hpPengaturan(); else msg((x && x.error) || 'Gagal'); } catch (e) { msg('Tidak ada sinyal'); }
+  });
+  var sl = $('#hp-salin'); if (sl) sl.addEventListener('click', function () {
+    var ta = $('#hp-link'); ta.select();
+    try { navigator.clipboard.writeText(ta.value).then(function () { msg('Alamat disalin', true); }, function () { document.execCommand('copy'); msg('Alamat disalin', true); }); } catch (e) { try { document.execCommand('copy'); msg('Alamat disalin', true); } catch (e2) { msg('Salin manual dari kotak'); } }
+  });
+  $('#hp-ujibtn').addEventListener('click', async function () {
+    var t = $('#hp-uji').value.trim(); if (!t) { msg('Tempel teks notifikasi dulu'); return; }
+    try {
+      var x = await api('wa_hp_uji', S.pin, t); var o = $('#hp-hasil');
+      if (!x || !x.ok) { msg((x && x.error) || 'Gagal'); return; }
+      o.innerHTML = x.ada ? '<b>Terbaca:</b> ' + (x.arah === 'masuk' ? 'uang masuk' : x.arah === 'keluar' ? 'uang keluar' : 'arah belum jelas') + ' · ' + rp(x.jumlah) + (x.pihak ? ' · ' + esc(x.pihak) : '') + (x.rek.length ? ' · rek …' + esc(x.rek.join(', ')) : '') + '<br><span class="muted">Nasib: ' + esc(x.nasib) + '</span>'
+        : '<span class="muted">Tidak terbaca sebagai transaksi uang (akan diabaikan).</span>';
+    } catch (e) { msg('Tidak ada sinyal'); }
+  });
 }
 async function nPengaturan() {
   if (S.role !== 'admin') return;
