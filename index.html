@@ -844,7 +844,7 @@ html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;co
 <div id="shell" hidden>
   <header class="top">
     <div style="display:flex;align-items:center;min-width:0"><button id="btnDrawer" class="ic ham" type="button" aria-label="Menu navigasi" data-ic="menu"></button><span class="hbadge"><img data-logo alt="Qurbandong"></span><div><div id="ttl" class="ttl">Qurbandong Farm</div><div id="sync" class="sub"></div></div></div>
-    <div style="display:flex;align-items:center;flex-shrink:0"><button id="btnBell" class="ic bell" type="button" aria-label="Notifikasi" data-ic="bell" hidden></button><button id="btnRefresh" class="ic" type="button" aria-label="Muat ulang" data-ic="refresh"></button><button id="btnMenu" class="ic" type="button" aria-label="Opsi" data-ic="dots"></button></div>
+    <div style="display:flex;align-items:center;flex-shrink:0"><button id="btnBell" class="ic bell" type="button" aria-label="Notifikasi" data-ic="bell" hidden></button><button id="btnRefresh" class="ic" type="button" aria-label="Muat ulang" data-ic="refresh"></button><button id="btnMenu" class="ic" type="button" aria-label="Pengaturan" data-ic="gear"></button></div>
   </header>
   <div id="qbar" class="qbar" hidden></div>
   <main>
@@ -2946,8 +2946,7 @@ function renderHome() {
     var sd = r.saldo, nm = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'], mm = /^(\d{4})-(\d{2})/.exec(sd.bulan || '');
     h += '<div class="card saldo" style="padding:0;overflow:hidden"><div class="saldo-h"><div class="l">Saldo kas terkini</div><div class="v ' + (sd.saldo < 0 ? 'neg' : '') + '">' + rp(sd.saldo) + '</div>' +
          '<div class="t">' + (sd.terakhir ? 'Transaksi terakhir ' + esc(sd.terakhir) : 'Belum ada transaksi') + '</div></div>' +
-         (r.kas ? '<div class="saldo-b kas-b"><div><span>Saldo bank</span><b class="' + (r.kas.bank < 0 ? 'neg' : '') + '">' + rp(r.kas.bank) + '</b></div><div><span>Saldo tunai</span><b class="' + (r.kas.tunai < 0 ? 'neg' : '') + '">' + (r.kas.mulai ? rp(r.kas.tunai) : 'belum dicatat') + '</b></div></div>' +
-           '<div class="kas-act"><button type="button" data-kas="tarik">Tarik tunai</button><button type="button" data-kas="pakai">Pakai tunai</button></div>' : '') +
+         (r.kas ? '<div class="saldo-b kas-b"><div><span>Saldo bank</span><b class="' + (r.kas.bank < 0 ? 'neg' : '') + '">' + rp(r.kas.bank) + '</b></div><div><span>Saldo tunai</span><b class="' + (r.kas.tunai < 0 ? 'neg' : '') + '">' + (r.kas.mulai ? rp(r.kas.tunai) : 'belum dicatat') + '</b></div></div>' : '') +
          '<div class="saldo-b"><div><span>Masuk ' + (mm ? nm[+mm[2] - 1] : 'bulan ini') + '</span><b class="pos">' + rp(sd.masuk) + '</b></div><div><span>Keluar ' + (mm ? nm[+mm[2] - 1] : 'bulan ini') + '</span><b class="neg">' + rp(sd.keluar) + '</b></div></div>' +
          '<button type="button" class="saldo-l" data-go-mut>Lihat mutasi lengkap ›</button></div>';
   }
@@ -3147,6 +3146,7 @@ var ICP = {
   file: '<path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/>',
   receipt: '<path d="M6 3h12v18l-3-2-3 2-3-2-3 2z"/><path d="M9 8h6"/><path d="M9 12h6"/>',
   share: '<path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 14v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5"/>',
+  gear: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/>',
   dots: '<circle cx="12" cy="5.5" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="12" cy="18.5" r="1.3"/>'
 };
 function ico(n) { return '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (ICP[n] || '') + '</svg>'; }
@@ -3193,6 +3193,7 @@ function goBack() {
 }
 function resetHist() { HIST = []; lastLoc = null; }
 /* ---------------- tombol + (lembar pilihan input) ---------------- */
+var KAS_ITEMS = function () { var pg = S.ringkas && S.ringkas.pemegang; return (S.role === 'admin' && (!pg || pg.saya)) ? [{ ic: 'wallet', t: 'Tarik tunai', s: 'Ambil uang dari bank menjadi kas tunai', fn: 'kas', arg: 'tarik' }, { ic: 'receipt', t: 'Pakai tunai', s: 'Belanja dengan uang tunai, beberapa item sekaligus', fn: 'kas', arg: 'pakai' }] : []; };
 function addItems(kind) {
   var L = [];
   if (kind === 'domba') {
@@ -3221,8 +3222,9 @@ function addItems(kind) {
       { id: 'keu.mut', ic: 'swap', t: 'Mutasi', s: 'Uang masuk dan keluar per bulan, beserta penginputnya', go: ['keu', 'mut'] },
       { id: 'keu.lap', ic: 'chart', t: 'Laporan keuangan', s: 'Rekap bulanan, RAB, dan PDF WhatsApp', go: ['keu', 'lap'] },
       { g: 'Input' },
-      { id: 'keu.input.catat', ic: 'wallet', t: 'Catat kas', s: 'Pemasukan atau pengeluaran', go: ['keu', 'input', 'catat'] },
-      { id: 'keu.input.inv', ic: 'file', t: 'Invoice', s: 'Buat tagihan untuk pelanggan', go: ['keu', 'input', 'inv'] },
+      { id: 'keu.input.catat', ic: 'wallet', t: 'Catat kas', s: 'Pemasukan atau pengeluaran', go: ['keu', 'input', 'catat'] });
+    KAS_ITEMS().forEach(function (x) { L.push(x); });
+    L.push({ id: 'keu.input.inv', ic: 'file', t: 'Invoice', s: 'Buat tagihan untuk pelanggan', go: ['keu', 'input', 'inv'] },
       { id: 'keu.input.kw', ic: 'receipt', t: 'Kuitansi', s: 'Buat bukti pembayaran', go: ['keu', 'input', 'kw'] },
       { id: 'keu.input.pel', ic: 'tag', t: 'Pelanggan', s: 'Daftar dan tambah pelanggan', go: ['keu', 'input', 'pel'] });
     return L;
@@ -3235,7 +3237,9 @@ function addItems(kind) {
     { ic: 'camera', t: 'Foto & video', s: 'Dokumentasi perkembangan domba', go: ['prod', 'input', 'media'] },
     { ic: 'sprout', t: 'Stok pakan', s: 'Beli, pakai, koreksi, atau buat silase', go: ['prod', 'input', 'pakan'] });
   if (S.role === 'admin') L.push({ g: 'Keuangan' },
-    { ic: 'wallet', t: 'Catat kas', s: 'Pemasukan atau pengeluaran', go: ['keu', 'input', 'catat'] },
+    { ic: 'wallet', t: 'Catat kas', s: 'Pemasukan atau pengeluaran', go: ['keu', 'input', 'catat'] });
+  if (S.role === 'admin') KAS_ITEMS().forEach(function (x) { L.push(x); });
+  if (S.role === 'admin') L.push(
     { ic: 'file', t: 'Invoice', s: 'Buat tagihan untuk pelanggan', go: ['keu', 'input', 'inv'] },
     { ic: 'receipt', t: 'Kuitansi', s: 'Buat bukti pembayaran', go: ['keu', 'input', 'kw'] });
   return L;
@@ -3262,6 +3266,7 @@ function initAdd() {
     var it = addItems(ADDKIND)[Number(b.getAttribute('data-ai'))]; if (!it) return;
     addClose();
     if (it.fn === 'wa') { waOpen(); return; }
+    if (it.fn === 'kas') { kasBuka(it.arg); return; }
     if (it.act) { compound(function () { go('domba'); if (it.act[1] === 'cari') { setTimeout(function () { var q = $('#q'); if (q) q.focus(); }, 60); } else { S.filter = it.act[1]; renderDomba(); } }); return; }
     if (it.go) compound(function () { drwGo(it.go); });
   });
