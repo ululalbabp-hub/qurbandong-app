@@ -2707,6 +2707,11 @@ var store = {
   set: function (k, v) { try { localStorage.setItem(k, v); } catch (e) { mem[k] = v; } },
   del: function (k) { try { localStorage.removeItem(k); } catch (e) { delete mem[k]; } }
 };
+/* cache tampilan terakhir di HP: layar terbuka langsung, data baru menyusul */
+function cUser() { return (S.me && S.me.user) || 'pin'; }
+function cGet(k) { try { return JSON.parse(store.get('qf_c_' + cUser() + '_' + k) || 'null'); } catch (e) { return null; } }
+function cSet(k, v) { try { store.set('qf_c_' + cUser() + '_' + k, JSON.stringify(v)); } catch (e) { /* abaikan */ } }
+function cClear() { try { Object.keys(localStorage).forEach(function (k) { if (k.indexOf('qf_c_') === 0) localStorage.removeItem(k); }); } catch (e) { /* abaikan */ } }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 var nf0 = new Intl.NumberFormat('id-ID', { maximumFractionDigits: 0 });
 var nf1 = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
@@ -2785,7 +2790,7 @@ function loadSession() {
 }
 function logout(msg) {
   NOTIF.daftar = []; NOTIF.maks = 0; NOTIF.ts = 0; NOTIF._seen = null; try { nBadge(); } catch (e0) { /* abaikan */ }
-  store.del('qf_session'); S.pin = ''; S.me = null; S.mut = null; S.akun = null; S.akunMenunggu = 0; S.ringkas = null; S.domba = null; S.inv = null; S.lap = null; S.dok = null; S.investor = ''; S.invPilih = ''; S.tab = 'home'; KDL.reset();
+  cClear(); store.del('qf_session'); S.pin = ''; S.me = null; S.mut = null; S.akun = null; S.akunMenunggu = 0; S.ringkas = null; S.domba = null; S.inv = null; S.lap = null; S.dok = null; S.investor = ''; S.invPilih = ''; S.tab = 'home'; KDL.reset();
   $('#shell').hidden = true; $('#login').hidden = false; $('#pin').value = ''; showLoginBox(false);
   $('#loginErr').className = 'err'; $('#loginErr').textContent = msg || '';
 }
@@ -2919,8 +2924,10 @@ async function refreshAll() {
     return;
   }
   try {
-    var res = await Promise.all([api('wa_ringkas', S.pin), api('wa_domba', S.pin)]);
-    var r = res[0], d = res[1];
+    var b = await api('wa_beranda', S.pin), r, d;
+    if (b && b.ok && b.r) { r = b.r; d = b.d; }
+    else if (b && b.ok === false && /belum berisi kode/.test(String(b.error))) { var res = await Promise.all([api('wa_ringkas', S.pin), api('wa_domba', S.pin)]); r = res[0]; d = res[1]; }
+    else { r = b || {}; d = b || {}; }
     if (!r.ok || !d.ok) {
       if (r.pinSalah || d.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
       toast((r.error || d.error || 'Gagal memuat data'), 'err'); setSync('offline'); return;
@@ -5115,7 +5122,7 @@ async function flushQueue(manual) {
       var it = q[0];
       if (it.tries >= 6 && !manual) break;
       var r;
-      try { r = await api('wa_simpan', S.pin, it.jenis, it.payload, it.uid); }
+      try { r = it.fn ? await api.apply(null, [it.fn, S.pin].concat(it.args || [], [it.uid])) : await api('wa_simpan', S.pin, it.jenis, it.payload, it.uid); }
       catch (e) { it.tries++; qSet(q); offline = true; break; }
       if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi, data antrian tetap tersimpan.'); break; }
       if (r.ok) { q.shift(); sent++; qSet(q); }
@@ -5358,11 +5365,16 @@ async function nUnduhPdf(nama, bulan, tombol) {
 }
 /* ---------------- notifikasi bank (BCA) dari HP -> antrean konfirmasi ---------------- */
 function hpOpsi(arr, pilih, kosong) { return (kosong ? '<option value="">' + esc(kosong) + '</option>' : '') + (arr || []).map(function (k) { return '<option' + (k === pilih ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join(''); }
-async function hpBuka() {
+async function hpBuka(segar) {
   if (S.role !== 'admin') return;
-  showSheet('<h3>Notifikasi bank</h3><p class="muted small">Memuat…</p>');
-  var r; try { r = await api('wa_hp_antrean', S.pin); } catch (e) { showSheet('<h3>Notifikasi bank</h3><p class="muted small">Tidak ada sinyal.</p>'); return; }
+  var ck = 'hp', ca = segar === true ? null : cGet(ck);
+  if (ca && ca.menunggu) hpRender(ca); else if (!(segar === true && $('#sheetBody').querySelector('.hp'))) showSheet('<h3>Notifikasi bank</h3><p class="muted small">Memuat…</p>');
+  var r; try { r = await api('wa_hp_antrean', S.pin); } catch (e) { if (!ca) showSheet('<h3>Notifikasi bank</h3><p class="muted small">Tidak ada sinyal.</p>'); return; }
   if (!r || !r.ok) { showSheet('<h3>Notifikasi bank</h3><p class="neg small">' + esc((r && r.error) || 'Gagal') + '</p>'); return; }
+  cSet(ck, r);
+  if (!ca || !ca.menunggu || JSON.stringify(ca) !== JSON.stringify(r)) { if (!$('#sheet').hidden && ($('#sheetBody').querySelector('.hp') || !ca)) hpRender(r); }
+}
+function hpRender(r) {
   var h = '<h3>Notifikasi bank</h3><div class="hp">';
   h += '<div class="muted small">' + (r.rek ? 'Hanya rekening berakhiran <b>' + esc(r.rek) + '</b> yang dicatat.' : 'Semua rekening dicatat (belum diatur).') + ' Setiap notifikasi menunggu persetujuan Anda sebelum masuk ke Keuangan.</div>';
   if (!r.menunggu.length) h += '<div class="card" style="margin:10px 0"><b>Tidak ada yang menunggu.</b><div class="muted small">Notifikasi uang masuk/keluar dari HP akan muncul di sini.</div></div>';
@@ -5400,24 +5412,39 @@ async function hpBuka() {
       var kat = card.querySelector('.hp-kat').value; if (!kat) { msg.textContent = 'Pilih kategori dulu'; return; }
       var arah = sa ? sa.value : ''; if (sa && !arah) { msg.textContent = 'Pilih arah dulu'; return; }
       this.disabled = true; msg.textContent = '';
+      var pay = { kategori: kat, arah: arah, pemilik: card.querySelector('.hp-pem').value, ket: card.querySelector('.hp-ket').value, tanggal: card.querySelector('.hp-tgl').value };
+      card.style.opacity = '.45';
       try {
-        var x = await api('wa_hp_proses', S.pin, id, 'setuju', { kategori: kat, arah: arah, pemilik: card.querySelector('.hp-pem').value, ket: card.querySelector('.hp-ket').value, tanggal: card.querySelector('.hp-tgl').value });
-        if (!x || !x.ok) { msg.textContent = (x && x.error) || 'Gagal'; this.disabled = false; return; }
-        toast(x.pesan || 'Tercatat', 'ok'); hpKurangi(); hpBuka();
-      } catch (e) { msg.textContent = 'Tidak ada sinyal. Coba lagi.'; this.disabled = false; }
+        var x = await api('wa_hp_proses', S.pin, id, 'setuju', pay);
+        if (!x || !x.ok) { card.style.opacity = ''; msg.textContent = (x && x.error) || 'Gagal'; this.disabled = false; return; }
+        toast(x.pesan || 'Tercatat', 'ok'); hpKurangi(); card.remove(); hpBuka(true);
+      } catch (e) { card.style.opacity = ''; msg.textContent = 'Tidak ada sinyal. Coba lagi.'; this.disabled = false; }
     });
     card.querySelector('.hp-no').addEventListener('click', async function () {
       if (!confirm('Tolak notifikasi ini? Tidak akan dicatat ke Keuangan.')) return;
-      try { var x = await api('wa_hp_proses', S.pin, id, 'tolak', {}); if (x && x.ok) { hpKurangi(); hpBuka(); } else msg.textContent = (x && x.error) || 'Gagal'; } catch (e) { msg.textContent = 'Tidak ada sinyal'; }
+      try { var x = await api('wa_hp_proses', S.pin, id, 'tolak', {}); if (x && x.ok) { hpKurangi(); card.remove(); hpBuka(true); } else msg.textContent = (x && x.error) || 'Gagal'; } catch (e) { msg.textContent = 'Tidak ada sinyal'; }
     });
   });
   $$('.hp-pul', body).forEach(function (b) { b.addEventListener('click', async function () {
-    try { var x = await api('wa_hp_proses', S.pin, Number(b.closest('[data-ab]').getAttribute('data-ab')), 'pulihkan', {}); if (x && x.ok) hpBuka(); else toast((x && x.error) || 'Gagal', 'err'); } catch (e) { toast('Tidak ada sinyal', 'err'); }
+    try { var x = await api('wa_hp_proses', S.pin, Number(b.closest('[data-ab]').getAttribute('data-ab')), 'pulihkan', {}); if (x && x.ok) hpBuka(true); else toast((x && x.error) || 'Gagal', 'err'); } catch (e) { toast('Tidak ada sinyal', 'err'); }
   }); });
 }
 
 /* ---------- kas tunai: tarik tunai, pakai tunai beberapa item, saldo bank & tunai ---------- */
 function kasAngka(v) { return parseInt(String(v || '').replace(/\D/g, ''), 10) || 0; }
+/** Kirim ke server di belakang layar (layar sudah tertutup). Gagal jaringan: masuk antrian HP; ditolak server: tampil galat dan angka dikembalikan. */
+async function kasLatar(fn, pay, uid, label) {
+  try {
+    var x = await api(fn, S.pin, pay, uid);
+    if (x && x.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
+    if (!x || !x.ok) { toast('Ditolak server: ' + ((x && x.error) || 'Gagal') + '\nAngka dikembalikan.', 'err'); refreshAll(); return; }
+    if (S.ringkas && S.ringkas.kas && x.tunai != null) S.ringkas.kas = Object.assign({}, S.ringkas.kas, { tunai: x.tunai, bank: x.bank, mulai: true });
+    toast('Terkirim ✓ ' + (x.pesan || label) + (x.peringatan ? '\n' + x.peringatan : ''), x.peringatan ? 'warn' : 'ok'); refreshAll();
+  } catch (e) {
+    qAdd({ uid: uid, fn: fn, args: [pay], label: label, ts: Date.now(), tries: 0 });
+    toast('Tidak ada sinyal. Data disimpan di HP dan dikirim otomatis.', 'warn');
+  }
+}
 async function kasBuka(fokus) {
   if (S.role !== 'admin') return;
   var r = S.ringkas && S.ringkas.kas, cepat = !!(r && r.kategoriKeluar && r.jenis);   // sudah ada dari Beranda: buka langsung, riwayat menyusul
@@ -5473,33 +5500,32 @@ async function kasBuka(fokus) {
     r.tunai = x.tunai; r.bank = x.bank; r.mulai = x.mulai; S.ringkas.kas = Object.assign({}, S.ringkas.kas, { tunai: x.tunai, bank: x.bank, mulai: x.mulai, awal: x.awal });
     $('#kas-hist').innerHTML = kasHist(x); $('#kas-bank').textContent = rp(x.bank); $('#kas-tunai').textContent = x.mulai ? rp(x.tunai) : 'belum dicatat'; hitung();
   }).catch(function () { var hh = $('#kas-hist'); if (hh) hh.innerHTML = '<p class="muted small">Riwayat belum bisa dimuat (tidak ada sinyal).</p>'; });
-  $('#kt-ok').addEventListener('click', async function () {
-    var m = $('#kt-msg'), j = kasAngka($('#kt-jml').value); m.className = 'err'; m.textContent = '';
+  $('#kt-ok').addEventListener('click', function () {
+    var m = $('#kt-msg'), j = kasAngka($('#kt-jml').value), jn = $('#kt-jenis').value; m.className = 'err'; m.textContent = '';
     if (j < 1000) { m.textContent = 'Isi jumlah dengan benar'; return; }
-    this.disabled = true;
-    try {
-      var x = await api('wa_kas_tarik', S.pin, { jenis: $('#kt-jenis').value, jumlah: String(j), tanggal: $('#kt-tgl').value, ket: $('#kt-ket').value }, uT);
-      if (!x || !x.ok) { m.textContent = (x && x.error) || 'Gagal'; this.disabled = false; return; }
-      toast((x.pesan || 'Tersimpan') + (x.peringatan ? '. ' + x.peringatan : ''), 'ok'); if (S.ringkas && S.ringkas.kas) S.ringkas.kas = Object.assign({}, S.ringkas.kas, { tunai: x.tunai, bank: x.bank, mulai: true }); refreshAll(); kasBuka('');
-    } catch (e) { m.textContent = 'Tidak ada sinyal. Coba lagi.'; this.disabled = false; }
+    if (jn === 'Setor tunai ke bank' && r.mulai && j > r.tunai) { m.textContent = 'Saldo tunai tidak cukup (sisa ' + rp(r.tunai) + ')'; return; }
+    var pay = { jenis: jn, jumlah: String(j), tanggal: $('#kt-tgl').value, ket: $('#kt-ket').value };
+    var k = S.ringkas && S.ringkas.kas;
+    if (k) { var d = jn === 'Setor tunai ke bank' ? -j : j; S.ringkas.kas = Object.assign({}, k, { tunai: k.tunai + d, bank: k.bank - d, mulai: true }); try { renderHome(); } catch (e) { /* abaikan */ } }
+    closeSheet(); toast('Tersimpan ✓ ' + jn + ' ' + rp(j) + ' (mengirim ke server…)', 'ok');
+    kasLatar('wa_kas_tarik', pay, uT, jn + ' ' + rp(j));
   });
-  $('#kp-ok').addEventListener('click', async function () {
+  $('#kp-ok').addEventListener('click', function () {
     var m = $('#kp-msg'); m.className = 'err'; m.textContent = '';
-    var items = [], salah = '';
+    var items = [], salah = '', total = 0;
     $$('.kas-it', box).forEach(function (it, i) {
       var k = it.querySelector('.k-kat').value, j = kasAngka(it.querySelector('.k-jml').value), t = it.querySelector('.k-ket').value;
       if (!k && !j && !t) return;
       if (!k || j < 100) { salah = 'Lengkapi kategori dan jumlah pada item ' + (i + 1); return; }
-      items.push({ kategori: k, jumlah: String(j), ket: t });
+      items.push({ kategori: k, jumlah: String(j), ket: t }); total += j;
     });
     if (salah) { m.textContent = salah; return; }
     if (!items.length) { m.textContent = 'Isi minimal satu item'; return; }
-    this.disabled = true;
-    try {
-      var x = await api('wa_kas_pakai', S.pin, { tanggal: $('#kp-tgl').value, items: items }, uP);
-      if (!x || !x.ok) { m.textContent = (x && x.error) || 'Gagal'; this.disabled = false; return; }
-      toast(x.pesan || 'Tersimpan', 'ok'); if (S.ringkas && S.ringkas.kas) S.ringkas.kas = Object.assign({}, S.ringkas.kas, { tunai: x.tunai, bank: x.bank, mulai: true }); refreshAll(); kasBuka('');
-    } catch (e) { m.textContent = 'Tidak ada sinyal. Coba lagi.'; this.disabled = false; }
+    if (total > r.tunai) { m.textContent = 'Saldo tunai tidak cukup. Sisa ' + rp(r.tunai) + ', item berjumlah ' + rp(total); return; }
+    var k0 = S.ringkas && S.ringkas.kas;
+    if (k0) { S.ringkas.kas = Object.assign({}, k0, { tunai: k0.tunai - total }); if (S.ringkas.saldo) S.ringkas.saldo = Object.assign({}, S.ringkas.saldo, { saldo: S.ringkas.saldo.saldo - total }); try { renderHome(); } catch (e) { /* abaikan */ } }
+    closeSheet(); toast('Tersimpan ✓ ' + items.length + ' item, ' + rp(total) + ' (mengirim ke server…)', 'ok');
+    kasLatar('wa_kas_pakai', { tanggal: $('#kp-tgl').value, items: items }, uP, 'Pakai tunai ' + items.length + ' item ' + rp(total));
   });
   if (fokus) { var tg = $(fokus === 'pakai' ? '#kas-pakai' : '#kas-tarik'); if (tg && tg.scrollIntoView) tg.scrollIntoView(); }
 }
@@ -5629,10 +5655,12 @@ function bulanLabel(ym) { var m = /^(\d{4})-(\d{2})$/.exec(ym || ''); return m ?
 function tglPendek(iso) { var p = String(iso).split('-'); return p.length === 3 ? Number(p[2]) + ' ' + BLN[Number(p[1]) - 1].slice(0, 3) + ' ' + p[0] : iso; }
 function loadMut(bulan) {
   if (S.role !== 'admin') return;
-  var box = $('#s-mut');
+  var box = $('#s-mut'), ck = 'mut_' + (bulan || S.mutBulan || ''), ca = cGet(ck);
+  if (ca && ca.rows && (!S.mut || (bulan && bulan !== S.mutBulan))) { S.mut = ca; S.mutBulan = ca.bulan; renderMut(); }
   api('wa_keu_mutasi', S.pin, bulan || S.mutBulan || '').then(function (r) {
     if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
     if (!r.ok) { toast(r.error || 'Gagal memuat mutasi', 'err'); return; }
+    cSet(ck, r); if (!bulan) cSet('mut_', r);
     S.mut = r; S.mutBulan = r.bulan; renderMut();
   }).catch(function () { if (!S.mut) box.innerHTML = '<p class="muted small" style="padding:6px">Tidak ada sinyal. Mutasi butuh koneksi.</p>'; });
 }
