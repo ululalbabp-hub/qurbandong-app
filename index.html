@@ -5641,10 +5641,10 @@ function renderMut() {
   if (!r) { box.innerHTML = '<p class="muted small" style="padding:6px">Memuat mutasi…</p>'; return; }
   var fl = S.mutF || 'semua', oleh = S.mutOleh || '';
   var orang = []; r.rows.forEach(function (t) { if (orang.indexOf(t.oleh) < 0) orang.push(t.oleh); });
-  var kat = S.mutKat || '', urut = S.mutS || 'tgl_asc', kats = []; r.rows.forEach(function (t) { if (kats.indexOf(t.kat) < 0) kats.push(t.kat); }); kats.sort();
+  var kat = S.mutKat || '', urut = S.mutS || 'tgl_desc', kats = []; r.rows.forEach(function (t) { if (kats.indexOf(t.kat) < 0) kats.push(t.kat); }); kats.sort();
   var rows = r.rows.filter(function (t) { return (fl === 'semua' || (fl === 'masuk' && t.masuk > 0) || (fl === 'keluar' && t.keluar > 0)) && (!oleh || t.oleh === oleh) && (!kat || t.kat === kat); });
   var jml = function (t) { return t.masuk > 0 ? t.masuk : t.keluar; }, cmpS = function (a, b) { return a < b ? -1 : a > b ? 1 : 0; };
-  var SORTS = { tgl_asc: ['Tanggal: terlama dulu', null], tgl_desc: ['Tanggal: terbaru dulu', null], oleh: ['Penginput (A-Z)', function (t) { return t.oleh; }], kat: ['Kategori (A-Z)', function (t) { return t.kat; }],
+  var SORTS = { tgl_desc: ['Tanggal: terbaru dulu', null], tgl_asc: ['Tanggal: terlama dulu', null], oleh: ['Penginput (A-Z)', function (t) { return t.oleh; }], kat: ['Kategori (A-Z)', function (t) { return t.kat; }],
     metode: ['Metode (Tunai/Transfer)', function (t) { return t.metode || '-'; }], jml_desc: ['Jumlah: terbesar', null], jml_asc: ['Jumlah: terkecil', null] };
   var idx = {}; r.rows.forEach(function (t, i) { idx[t.d + '|' + i] = i; });
   rows = rows.map(function (t) { return { t: t, i: r.rows.indexOf(t) }; });
