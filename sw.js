@@ -1,5 +1,5 @@
 /* Service worker Qurbandong: cangkang aplikasi tetap bisa dibuka tanpa sinyal. */
-const CACHE = 'qf-v44';
+const CACHE = 'qf-v45';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './config.js', './icon-192.png', './icon-512.png', './apple-touch-icon.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(caches.open(CACHE).then(function (c) { return c.addAll(ASSETS); }).then(function () { return self.skipWaiting(); }));
@@ -15,7 +15,7 @@ self.addEventListener('fetch', function (e) {
   const u = new URL(r.url);
   if (u.origin !== location.origin) return;           // permintaan ke Apps Script tidak disentuh
   e.respondWith(
-    fetch(r).then(function (res) {
+    fetch(r, { cache: 'no-store' }).then(function (res) {
       const copy = res.clone();
       caches.open(CACHE).then(function (c) { c.put(r, copy); });
       return res;

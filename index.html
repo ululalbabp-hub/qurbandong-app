@@ -5729,7 +5729,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (qp && URL_OK.test(qp)) { API_URL = qp; store.set('qf_api', qp); history.replaceState(null, '', location.pathname); }
   } catch (e) { /* abaikan */ }
   $('#srvbox').hidden = !needServer();
-  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !inAppsScript()) navigator.serviceWorker.register('sw.js').catch(function () {});
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !inAppsScript()) (function () { var had = !!navigator.serviceWorker.controller, rl = false; navigator.serviceWorker.addEventListener('controllerchange', function () { if (had && !rl) { rl = true; location.reload(); } }); navigator.serviceWorker.register('sw.js').then(function (r) { try { r.update(); } catch (e) {} }).catch(function () {}); document.addEventListener('visibilitychange', function () { if (!document.hidden) navigator.serviceWorker.getRegistration().then(function (r) { r && r.update(); }).catch(function () {}); }); })();
   $$('[data-logo]').forEach(function (i) { i.src = LOGO; });
   initDrawer();
   nInitUi();
