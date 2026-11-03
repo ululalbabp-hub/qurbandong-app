@@ -2247,7 +2247,6 @@ function applyRows(sheets){
     [['sil',/^Silase fermentasi$/i],['od',/^Rumput Odot segar/i],['kt',/^Konsentrat tambahan/i]].forEach(([k,re])=>{const row=find(R,re);if(row)for(let m=0;m<6;m++){const v=nv(row,m+1);o[k][m]=v!=null?v:0}});
   });
   const dom=mapSheep(rows('Data_Domba')||rows('Data_Domba_QDF')||[]);
-  if(!dom.length)throw new Error('Data domba kosong. Cek sheet Data_Domba di QDF.');
   const PP=rows('Peta_Palung');let pal=null;
   if(PP){const h=PP.findIndex(r=>r&&/^ID Palung/i.test(String(r[0]||'')));if(h>=0)pal=PP.slice(h+1).filter(r=>r&&/^P-/.test(String(r[0]||'').trim())).map(r=>[String(r[0]).trim(),String(r[1]||'').trim(),String(r[2]||'').trim()])}
   const J={...S.jadwal},PL=rows('Pakan_Palung');put(J,'silPagi',/^Porsi silase pagi/i,2,PL);put(J,'odPagi',/^Porsi odot/i,2,PL);put(J,'batas',/^Batas selisih bobot/i,2,PL);{const r=find(PL,/^Susut pelayuan odot/i),v=r&&typeof r[2]==='number'?r[2]:null;if(v!=null){const s=v>1?v/100:v;J.layu=s;J.pakaiLayu=s>0;J.layuSheet=s}else J.layuSheet=null}
