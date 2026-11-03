@@ -811,6 +811,116 @@ html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;co
 .hp .hp-ol{padding-left:18px;margin:8px 0;line-height:1.5}.hp .hp-ol code{background:var(--sunk);padding:1px 5px;border-radius:5px}
 .hp select{width:100%;padding:11px;border:1.5px solid var(--bd);border-radius:12px;font:inherit;background:var(--card);color:var(--tx)}
 /* ===== BRAND QD END ===== */
+/* ===== EDITORIAL BEGIN: datar, garis rambut, kertas champagne; hijau Pakistan sebagai tinta utama, Pumpkin hanya aksen kecil ===== */
+:root{--bg:#faf6ee;--card:#fffdf9;--tx:#2a2d2b;--mu:#7b756a;--bd:#e7dccb;--tint:#f4ecdf;--sunk:#f6efe3;--os:#fbeee1;--oi:#a8490f;
+--r1:10px;--r2:8px;--sh:none;--hair:1px solid var(--bd)}
+#s-kandang{--bg:#faf6ee;--surface:#fffdf9;--sunk:#f6efe3;--tint:#f4ecdf;--line:#e7dccb;--muted:#7b756a;--shadow:none;--r:10px;--rs:8px;--orange-soft:#fbeee1}
+html body,html:not([data-tema=dark]) body{background:var(--bg)!important;background-image:none!important;letter-spacing:.005em;-webkit-font-smoothing:antialiased;font-variant-numeric:lining-nums}
+.card,.kpi,.row,.nav button,table,.t,.kv,.v,.amt,.num{font-variant-numeric:tabular-nums lining-nums}
+/* huruf */
+h1,h2,h3,.ttl,.login h1,.welcome .wn,#s-kandang h1,#s-kandang h2,#s-kandang h3{font-weight:600!important;letter-spacing:-.005em}
+.card h3,.card>h3:first-child{font-size:11.5px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--mu);margin:0 0 12px}
+.card>h3:first-child::before{display:none}
+#s-kandang h2{font-size:23px;letter-spacing:-.01em;color:var(--tx)}
+#s-kandang h1{font-size:17px;font-weight:600;color:var(--tx)}
+label,#s-kandang .lbl,#s-kandang .eyebrow{font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:var(--mu)}
+/* header: terang, satu garis tipis */
+.top{background:var(--card)!important;color:var(--tx);border-bottom:1px solid var(--bd)!important;box-shadow:none!important;padding:8px 14px}
+.top .ttl{color:var(--g)!important;font-size:17px;font-weight:600;letter-spacing:.01em}
+.top .sub{color:var(--mu)!important;opacity:1;font-size:12px}
+.top .ic,.top .ic:active{background:transparent!important;color:var(--g);border:1px solid var(--bd);border-radius:8px;width:38px;height:38px;transform:none}
+.top .hbadge{background:transparent!important;padding:0;border-radius:0}
+.top .hbadge img{height:30px}
+/* tombol */
+.btn,.login .btn{background:var(--g)!important;color:#fff;border-radius:var(--r2);box-shadow:none!important;font-weight:600;letter-spacing:.02em;filter:none!important;transform:none!important}
+.btn:hover{background:#12571b!important}
+.btn.ghost{background:transparent!important;color:var(--g);border:1px solid var(--g)}
+.btn.wa{background:var(--pk)!important}
+.login .btn{background:var(--pk)!important}
+#s-kandang .btn{border-radius:var(--r2);font-weight:600;background:var(--g);color:#fff}
+#s-kandang .btn.ghost{background:transparent;color:var(--g);border:1px solid var(--bd)}
+#s-kandang .btn.orange{background:var(--pk)}
+#s-kandang .btn.danger{background:transparent;color:#9c2b1f;border:1px solid #e2b9b2}
+/* kartu: datar */
+.card,.kpi,#s-kandang .kpi,#s-kandang .slot,#s-kandang .panel,#s-kandang .al,#s-kandang .tw,#s-kandang .recipe{background:var(--card);border:1px solid var(--bd);border-radius:var(--r1);box-shadow:none!important;transform:none!important;animation:none!important}
+.card{padding:16px}
+.kpi .v,#s-kandang .kpi .v,#s-kandang .slot .amt{font-weight:500!important;letter-spacing:-.015em;color:var(--tx)}
+.kpi .l,#s-kandang .kpi .s{letter-spacing:.02em}
+.kpi.big{background:var(--g)!important;border:0!important;border-radius:var(--r1)}
+.kpi.big::after{display:none}
+.kpi.big .v{font-weight:400!important;font-size:38px;color:#fff}
+.kpi.big .l,.kpi.big .rng{color:#e4d9c4}
+.kpi.sakit .v{color:var(--oi)}.kpi.mati .v{color:#9c2b1f}.kpi.jual .v{color:#2c4a6b}
+.row{border-bottom:1px solid #efe6d6}
+/* chip: kotak kecil */
+.chip,#s-kandang .chip{border-radius:4px;font-weight:600;font-size:11.5px;letter-spacing:.03em;padding:2px 8px}
+.c-AMAN,.c-Sehat{background:#e7eee2;color:#27542d}.c-WASPADA,.c-Sakit{background:#f8e8d3;color:#8a4a12}
+.c-KRITIS,.c-Mati{background:#f3dcd8;color:#8e2a1f}.c-Terjual{background:#e1e8ef;color:#2c4a6b}
+/* tab: garis bawah, tanpa kapsul */
+.seg,#s-kandang .kd-tabs{background:transparent!important;padding:0;border-radius:0;border-bottom:1px solid var(--bd);gap:2px;margin-bottom:14px}
+.seg button,#s-kandang .kd-tabs button{background:transparent!important;border-radius:0;color:var(--mu);font-weight:500;padding:11px 12px;box-shadow:none!important;border-bottom:2px solid transparent;margin-bottom:-1px}
+.seg button.on,#s-kandang .kd-tabs button[aria-selected="true"]{background:transparent!important;color:var(--g)!important;font-weight:600;border-bottom:2px solid var(--pk)}
+.chips button,.mut-f button{border-radius:6px;background:transparent;border:1px solid var(--bd);color:var(--tx);font-weight:500}
+.chips button.on,.mut-f button.on{background:var(--g);border-color:var(--g);color:#fff}
+/* input */
+input[type=text],input[type=date],input[type=search],input[type=password],select,textarea,.in{border:1px solid var(--bd);border-radius:var(--r2);background:#fff;box-shadow:none}
+input:focus,select:focus,textarea:focus{outline:0;border-color:var(--g)!important;box-shadow:0 0 0 2px rgba(13,71,21,.12)!important}
+/* navigasi bawah */
+.nav{background:var(--card);border-top:1px solid var(--bd);box-shadow:none}
+.nav button{color:var(--mu);font-weight:500}
+.nav button.on{color:var(--g);font-weight:600}
+.nav button.on .e,.nav button.on svg{animation:none}
+.nav button.on::after{background:var(--pk);height:2px;width:22px;border-radius:0}
+.nav-add .plus{background:var(--pk)!important;color:#fff;box-shadow:0 0 0 4px var(--card)!important;animation:none!important}
+/* drawer, sheet, toast */
+.drw-h{background:var(--card);border-bottom:1px solid var(--bd)}
+.drw-i:active{transform:none}.drw-i.on,.drw-i.cur{background:var(--tint);color:var(--g)}
+.toast{background:var(--tx);border-left:0;border-radius:8px}
+/* login: datar */
+.login{background:var(--g)!important;background-image:none!important}
+.login::before,.login::after{display:none!important}
+.login .llogo{animation:none!important;box-shadow:none;border-radius:14px;background:var(--cp)}
+.login h1{font-weight:500;letter-spacing:.04em}
+.login input[type=password],.login input[type=text]{border:1px solid transparent;border-radius:var(--r2)}
+.login input:focus{border-color:var(--pk)!important;box-shadow:none!important}
+/* gerak: hanya muncul halus */
+.screen{animation:qdIn .18s ease both!important}
+.screen>.card,.screen>.grid2>.kpi,.screen>.grid2>.card{animation:none!important}
+.row:active{background:var(--tint)}
+/* placeholder foto */
+.dthumb.no,.icard .ph,.gal .vid,.icard .no{font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mu);text-align:center;line-height:1.3;padding:4px}
+.gal .vid{color:#cfd6d2}
+/* gelap: Jet datar */
+html[data-tema=dark]{--bg:#1b1d1c;--card:#232624;--tx:#f1eadf;--mu:#a29d92;--bd:#353a37;--tint:#2b302d;--sunk:#202321;--g:#8fc99c}
+html[data-tema=dark] #s-kandang{--bg:#1b1d1c;--surface:#232624;--line:#353a37;--sunk:#202321;--tint:#2b302d}
+html[data-tema=dark] .top{background:#232624!important;border-bottom:1px solid #353a37!important}
+html[data-tema=dark] .top .ttl,html[data-tema=dark] .top .ic{color:#8fc99c!important}
+html[data-tema=dark] .btn,html[data-tema=dark] .login .btn,html[data-tema=dark] #s-kandang .btn{background:#2d6a37!important;color:#fff}
+html[data-tema=dark] .btn.ghost,html[data-tema=dark] #s-kandang .btn.ghost{background:transparent!important;color:#8fc99c;border:1px solid #3b5a43}
+html[data-tema=dark] .login .btn{background:var(--pk)!important}
+html[data-tema=dark] .kpi.big{background:#1f4a27!important}
+html[data-tema=dark] .login{background:#14301a!important}
+html[data-tema=dark] .nav{background:#232624;border-top-color:#353a37}
+html[data-tema=dark] .seg button.on,html[data-tema=dark] #s-kandang .kd-tabs button[aria-selected="true"]{background:transparent!important;color:#8fc99c!important}
+html[data-tema=dark] .chips button.on,html[data-tema=dark] .mut-f button.on{background:#2d6a37!important;color:#fff!important}
+html[data-tema=dark] .drw-h{background:#232624}
+html[data-tema=dark] input,html[data-tema=dark] select,html[data-tema=dark] textarea{background:#1b1d1c}
+/* tambahan: saldo, nav, centang */
+.saldo .saldo-h{background:var(--g)!important;border-bottom:0!important}
+.saldo .saldo-h .v{font-weight:400!important;font-size:34px;letter-spacing:-.015em}
+.saldo .saldo-h .l{letter-spacing:.12em;font-weight:600}
+.saldo .saldo-b b{font-weight:600}
+.saldo .saldo-l,.saldo .kas-act button{font-weight:600}
+.nav button.on .ni,html[data-tema=dark] .nav button.on .ni{background:transparent!important}
+.nav button .ni{border-radius:0}
+.chk{letter-spacing:0;text-transform:none;font-weight:400;font-size:14px}
+input[type=checkbox]{accent-color:var(--g);width:16px;height:16px}
+.login input[type=checkbox]{accent-color:var(--pk)}
+.nav-add .plus{width:50px;height:50px}
+html[data-tema=dark] .saldo .saldo-h{background:#1f4a27!important}
+.ai{background:transparent!important;border:1px solid var(--bd);border-radius:8px;color:var(--g)}
+.addsh-g{letter-spacing:.12em}
+/* EDITORIAL END ===== */
 </style>
 </head>
 <body>
@@ -851,11 +961,11 @@ html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;co
     <div id="crumbRow" class="crumbrow" hidden><button id="btnBack" class="ic back" type="button" aria-label="Kembali" data-ic="back"></button><div id="crumb" class="crumb"></div></div>
     <div class="seg gbar" id="gbar" hidden></div>
     <div class="seg" id="seg" hidden>
-      <button type="button" data-f="timbang" class="on">⚖️ Timbang</button>
-      <button type="button" data-f="kondisi">🩺 Kondisi</button>
-      <button type="button" data-f="media">📷 Foto</button>
-      <button type="button" data-f="massal">⚖️ Massal</button>
-      <button type="button" data-f="pakan">🌾 Stok</button>
+      <button type="button" data-f="timbang" class="on">Timbang</button>
+      <button type="button" data-f="kondisi">Kondisi</button>
+      <button type="button" data-f="media">Foto</button>
+      <button type="button" data-f="massal">Massal</button>
+      <button type="button" data-f="pakan">Stok</button>
     </div>
     <section id="s-home" class="screen"></section>
     <section id="s-domba" class="screen" hidden>
@@ -872,7 +982,7 @@ html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;co
         <label>Bobot (kg)</label><input type="text" id="t-kg" inputmode="decimal" placeholder="mis. 31.5" autocomplete="off" required>
         <label>Catatan (opsional)</label><input type="text" id="t-cat">
         <label>Foto perkembangan (opsional, maks 3)</label>
-        <div class="pick"><button class="btn sm ghost" type="button" data-pick="t-cam">📷 Kamera</button><button class="btn sm ghost" type="button" data-pick="t-gal">🖼️ Galeri</button></div>
+        <div class="pick"><button class="btn sm ghost" type="button" data-pick="t-cam">Kamera</button><button class="btn sm ghost" type="button" data-pick="t-gal">Galeri</button></div>
         <input type="file" id="t-cam" accept="image/*" capture="environment" hidden>
         <input type="file" id="t-gal" accept="image/*" multiple hidden>
         <div id="t-prev" class="thumbs"></div>
@@ -897,12 +1007,12 @@ html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;co
         <label>Eartag</label><input type="text" id="m-tag" list="dl-semua" autocapitalize="characters" autocomplete="off" required>
         <div id="m-hint" class="hint"></div>
         <label>Foto (maks 3)</label>
-        <div class="pick"><button class="btn sm ghost" type="button" data-pick="m-cam">📷 Kamera</button><button class="btn sm ghost" type="button" data-pick="m-gal">🖼️ Galeri</button></div>
+        <div class="pick"><button class="btn sm ghost" type="button" data-pick="m-cam">Kamera</button><button class="btn sm ghost" type="button" data-pick="m-gal">Galeri</button></div>
         <input type="file" id="m-cam" accept="image/*" capture="environment" hidden>
         <input type="file" id="m-gal" accept="image/*" multiple hidden>
         <div id="m-prev" class="thumbs"></div>
         <label>Video (maks ±12 MB)</label>
-        <div class="pick"><button class="btn sm ghost" type="button" data-pick="m-vid">🎥 Pilih / rekam video</button></div>
+        <div class="pick"><button class="btn sm ghost" type="button" data-pick="m-vid">Pilih / rekam video</button></div>
         <input type="file" id="m-vid" accept="video/mp4,video/quicktime,video/webm,video/*" hidden>
         <div id="m-vinfo" class="hint"></div>
         <label>atau tempel tautan video (Google Drive / YouTube)</label><input type="text" id="m-link" inputmode="url" placeholder="https://..." autocapitalize="off">
@@ -935,8 +1045,8 @@ html[data-tema=dark] .c-AMAN,html[data-tema=dark] .c-Sehat{background:#223a29;co
 <datalist id="dl-semua"></datalist>
 <datalist id="dl-pel"></datalist>
 <div id="docView" hidden>
-  <div class="dv-bar"><button id="dvBack" class="btn sm" type="button">‹ Kembali</button><span><button id="dvPrint" class="btn sm ghost" type="button">🖨️ Cetak</button></span></div>
-  <div class="dv-wa"><b>Kirim ke WhatsApp</b><div><button id="dvWaPdf" class="btn sm wa" type="button">📄 Kirim PDF</button> <button id="dvWaJpg" class="btn sm wa" type="button">🖼️ Kirim JPG</button> <a id="dvWa" class="btn sm ghost" target="_blank" rel="noopener" hidden>💬 Chat saja</a></div></div>
+  <div class="dv-bar"><button id="dvBack" class="btn sm" type="button">‹ Kembali</button><span><button id="dvPrint" class="btn sm ghost" type="button">Cetak</button></span></div>
+  <div class="dv-wa"><b>Kirim ke WhatsApp</b><div><button id="dvWaPdf" class="btn sm wa" type="button">Kirim PDF</button> <button id="dvWaJpg" class="btn sm wa" type="button">Kirim JPG</button> <a id="dvWa" class="btn sm ghost" target="_blank" rel="noopener" hidden>Chat saja</a></div></div>
   <div id="dvPaper" class="paper"></div>
   <div id="dvAct" class="dv-act"></div>
 </div>
@@ -2749,12 +2859,20 @@ function api(fn) {
       return;
     }
     if (!API_URL) { reject(new Error('NO_API')); return; }
-    var ctl = ('AbortController' in window) ? new AbortController() : null;
-    var t = setTimeout(function () { if (ctl) ctl.abort(); reject(new Error('timeout')); }, 45000);
-    fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ fn: fn, args: args }), redirect: 'follow', signal: ctl ? ctl.signal : undefined })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (j) { clearTimeout(t); if (j && j.ok === false && /Fungsi tidak dikenal/.test(String(j.error))) j.error = msgServerLama(); resolve(j); })
-      .catch(function (e) { clearTimeout(t); reject(e); });
+    var body = JSON.stringify({ fn: fn, args: args }), coba = 0;
+    (function kirim() {
+      var ctl = ('AbortController' in window) ? new AbortController() : null;
+      var t = setTimeout(function () { if (ctl) ctl.abort(); }, 45000);
+      fetch(API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: body, redirect: 'follow', signal: ctl ? ctl.signal : undefined })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+        .then(function (j) { clearTimeout(t); if (j && j.ok === false && /Fungsi tidak dikenal/.test(String(j.error))) j.error = msgServerLama(); resolve(j); })
+        .catch(function (e) {
+          clearTimeout(t);
+          /* jaringan putus / start dingin: ulangi sekali (aman, simpan memakai ID unik anti-ganda) */
+          if (coba++ < 1 && !(navigator.onLine === false)) { setTimeout(kirim, 1200); return; }
+          reject(e && e.name === 'AbortError' ? new Error('timeout') : e);
+        });
+    })();
   });
 }
 var deferredPrompt = null;
@@ -3031,7 +3149,7 @@ function renderDomba() {
   if (!S.domba) h = '<p class="muted">Memuat data…</p>';
   else if (!l.length) h = '<p class="muted">Tidak ada domba yang cocok.</p>';
   l.slice(0, 150).forEach(function (x) {
-    h += '<div class="row" data-tag="' + esc(x.t) + '" style="cursor:pointer"><div class="rl">' + thumbTag(x.f, 'dthumb') + '<div class="a"><b>' + esc(x.t) + '</b><span>' + esc(x.j) + ' · ' + esc(x.k || '-') + ' · ' + esc(x.p || '-') + (x.nf ? ' · 📷' + x.nf : '') + '</span></div></div>' +
+    h += '<div class="row" data-tag="' + esc(x.t) + '" style="cursor:pointer"><div class="rl">' + thumbTag(x.f, 'dthumb') + '<div class="a"><b>' + esc(x.t) + '</b><span>' + esc(x.j) + ' · ' + esc(x.k || '-') + ' · ' + esc(x.p || '-') + (x.nf ? ' · ' + x.nf + ' foto' : '') + '</span></div></div>' +
          '<div style="text-align:right"><b>' + (x.b != null ? nf1.format(x.b) + ' kg' : '-') + '</b><br>' + chip(x.s) + '</div></div>';
   });
   if (l.length > 150) h += '<p class="muted small">Menampilkan 150 dari ' + l.length + '. Persempit pencarian.</p>';
@@ -3378,7 +3496,7 @@ function initDrawer() {
   try { new MutationObserver(function () { updCrumb(); track(); }).observe($('#s-kandang'), { attributes: true, attributeFilter: ['data-kdtab'] }); } catch (e) { /* tanpa observer */ }
 }
 /* ---------------- navigasi ---------------- */
-var GSUB = { prod: [['kandang', '🌾 Kandang'], ['input', '✍️ Input'], ['lap', '📊 Laporan']], keu: [['dash', '📈 Dashboard'], ['lap', '📊 Laporan'], ['input', '✍️ Input']] };
+var GSUB = { prod: [['kandang', 'Kandang'], ['input', 'Input'], ['lap', 'Laporan']], keu: [['dash', 'Dashboard'], ['lap', 'Laporan'], ['input', 'Input']] };
 function renderGbar(tab) {
   var el = $('#gbar'), L = GSUB[tab];
   if (!L) { el.hidden = true; return; }
@@ -3571,7 +3689,7 @@ async function onSubmitKeu(e) {
 /* ---------------- foto / video ---------------- */
 function thumbTag(url, cls) {
   if (url && /^https:\/\//.test(url)) return '<img class="' + cls + '" src="' + esc(url) + '" loading="lazy" alt="" referrerpolicy="no-referrer">';
-  return '<div class="' + cls + ' no">🐑</div>';
+  return '<div class="' + cls + ' no">Belum ada foto</div>';
 }
 function readImage(file) {
   return new Promise(function (resolve, reject) {
@@ -3626,7 +3744,7 @@ function onPilihVideo() {
   rd.onload = function () {
     var mime = f.type === 'video/quicktime' || f.type === 'video/webm' ? f.type : 'video/mp4';
     S.video = { mime: mime, data: String(rd.result).split(',')[1], nama: f.name, mb: f.size / 1048576 };
-    info.textContent = '🎥 ' + f.name + ' · ' + nf1.format(S.video.mb) + ' MB siap diunggah'; info.className = 'hint ok';
+    info.textContent = '' + f.name + ' · ' + nf1.format(S.video.mb) + ' MB siap diunggah'; info.className = 'hint ok';
   };
   rd.onerror = function () { info.textContent = 'Video gagal dibaca'; info.className = 'hint bad'; };
   rd.readAsDataURL(f);
@@ -3653,7 +3771,7 @@ function galeri(list, tagLabel) {
   if (!list || !list.length) return '<p class="muted small">Belum ada foto/video.</p>';
   return '<div class="gal">' + list.map(function (m) {
     var ok = /^https:\/\//.test(m.url || '');
-    var inner = (m.j === 'foto' && /^https:\/\//.test(m.thumb || '')) ? '<img src="' + esc(m.thumb) + '" loading="lazy" alt="Foto ' + esc(m.d) + '" referrerpolicy="no-referrer">' : '<div class="vid">🎬</div>';
+    var inner = (m.j === 'foto' && /^https:\/\//.test(m.thumb || '')) ? '<img src="' + esc(m.thumb) + '" loading="lazy" alt="Foto ' + esc(m.d) + '" referrerpolicy="no-referrer">' : '<div class="vid">Video</div>';
     var cap = (tagLabel && m.tag ? esc(m.tag) + ' · ' : '') + esc(m.d) + (!tagLabel && m.cat ? ' · ' + esc(m.cat.replace(/\s*\[app-[a-z]+\]$/, '')) : '');
     return ok ? '<a href="' + esc(m.url) + '" target="_blank" rel="noopener">' + inner + '<small>' + cap + '</small></a>' : '';
   }).join('') + '</div>';
@@ -3697,7 +3815,7 @@ function welcomeHtml(nama) {
     '<div class="wt">Amanah Anda, tanggung jawab kami.</div></div>';
 }
 function invAddHtml() {
-  return '<details class="card invadd" id="invAddBox"><summary>➕ Tambah investor baru</summary>' +
+  return '<details class="card invadd" id="invAddBox"><summary>Tambah investor baru</summary>' +
     '<form id="f-invadd" autocomplete="off">' +
     '<label>Nama investor</label><input type="text" id="ia-nama" maxlength="60" required>' +
     '<label>Bagian pemodal (%)</label><input type="text" id="ia-pct" inputmode="decimal" value="50" placeholder="50 atau 40">' +
@@ -3768,10 +3886,10 @@ function renderInv() {
   h += '<h3 class="sec">Domba saya</h3>';
   if (!r.domba.length) h += '<p class="muted">Belum ada domba atas nama ini.</p>';
   r.domba.forEach(function (x) {
-    var ph = (x.foto && /^https:\/\//.test(x.foto)) ? '<img class="ph" src="' + esc(x.foto) + '" loading="lazy" alt="" referrerpolicy="no-referrer">' : '<div class="ph">🐑</div>';
+    var ph = (x.foto && /^https:\/\//.test(x.foto)) ? '<img class="ph" src="' + esc(x.foto) + '" loading="lazy" alt="" referrerpolicy="no-referrer">' : '<div class="ph">Belum ada foto</div>';
     var akhir = (x.status === 'Mati') ? 'Mati' : (x.bobotAkhir != null ? nf1.format(x.bobotAkhir) + ' kg' : '-');
     h += '<div class="icard" data-itag="' + esc(x.tag) + '">' + ph + '<div class="bd"><div style="display:flex;justify-content:space-between;gap:6px"><b>' + esc(x.tag) + '</b>' + chip(x.status) + '</div>' +
-      '<div class="ln"><span>📍 Kandang</span><span><b>' + esc(x.kandang || '-') + '</b></span></div>' +
+      '<div class="ln"><span>Kandang</span><span><b>' + esc(x.kandang || '-') + '</b></span></div>' +
       '<div class="ln"><span>Bobot</span><span>' + (x.bobotAwal != null ? nf1.format(x.bobotAwal) : '-') + ' → <b>' + (x.bobot != null ? nf1.format(x.bobot) : '-') + '</b> → ' + akhir + '</span></div>' +
       '<div class="ln"><span>HPP kini</span><span>' + rp(x.hpp) + '</span></div>' +
       '<div class="ln"><span>' + (x.jenisLaba === 'proyeksi' ? 'Perkiraan jual' : x.jenisLaba === 'realisasi' ? 'Hasil jual' : 'Hasil') + '</span><span><b>' + rp(x.hargaJual) + '</b></span></div>' +
@@ -3836,7 +3954,7 @@ async function openInvDetail(tag) {
   try {
     var r = await api('wa_inv_detail', S.pin, tag, S.role === 'admin' ? S.invPilih : '');
     if (!r.ok) { showSheet('<p class="neg">' + esc(r.error || 'Gagal memuat') + '</p>'); return; }
-    var h = '<h3>' + esc(r.tag) + ' ' + chip(r.status) + '</h3><p class="muted small" style="margin:0 0 8px">' + esc(r.jenis) + ' · 📍 Kandang <b>' + esc(r.kandang || '-') + '</b>' + (r.blok ? ' (Blok ' + esc(r.blok) + ')' : '') + ' · masuk ' + esc(r.masuk || '-') + ' · ' + (r.hari != null && r.hari !== '' ? esc(r.hari) + ' hari' : '') + '</p>';
+    var h = '<h3>' + esc(r.tag) + ' ' + chip(r.status) + '</h3><p class="muted small" style="margin:0 0 8px">' + esc(r.jenis) + ' · Kandang <b>' + esc(r.kandang || '-') + '</b>' + (r.blok ? ' (Blok ' + esc(r.blok) + ')' : '') + ' · masuk ' + esc(r.masuk || '-') + ' · ' + (r.hari != null && r.hari !== '' ? esc(r.hari) + ' hari' : '') + '</p>';
     var pj = r.proyeksi;
     h += '<div class="grid2" style="margin-bottom:8px"><div class="kpi"><div class="v">' + (r.bobot != null ? nf1.format(r.bobot) : '-') + '</div><div class="l">Bobot terkini (kg) · awal ' + (r.bobotAwal != null ? nf1.format(r.bobotAwal) : '-') + '</div></div>' +
          '<div class="kpi"><div class="v">' + (r.adg != null ? nf3.format(r.adg) : '-') + '</div><div class="l">Kenaikan kg/hari</div></div>' +
@@ -4120,7 +4238,7 @@ async function showInvoice(no) {
     var teks = 'Yth. ' + d.pelanggan + ',\nBerikut invoice ' + d.no + ' dari ' + P.nama + ' (' + tglId(d.tgl) + '):\nTotal ' + rp(d.total) + (d.terbayar ? ', sudah dibayar ' + rp(d.terbayar) : '') + '\nSisa tagihan ' + rp(d.sisa) + (d.tempo ? '\nJatuh tempo ' + tglId(d.tempo) : '') +
       (P.bank ? '\nPembayaran ke ' + P.bank + ' a.n. ' + P.rekening : '') + '\nTerima kasih.';
     var href = 'https://wa.me/' + wa + '?text=' + encodeURIComponent(teks);
-    var act = d.sisa > 0 ? '<button class="btn" type="button" id="dvKw" data-no="' + esc(d.no) + '">📄 Buat kuitansi pembayaran</button>' : '';
+    var act = d.sisa > 0 ? '<button class="btn" type="button" id="dvKw" data-no="' + esc(d.no) + '">Buat kuitansi pembayaran</button>' : '';
     openDocView(invoiceHtml(d), act, href, { kind: 'invoice', d: d, teks: teks, nama: namaBerkas('Invoice', d.no) });
   } catch (e) { toast('Tidak bisa memuat invoice (offline?)', 'err'); }
 }
@@ -4681,7 +4799,7 @@ function barChart(labels, series, o) {
   return svg;
 }
 function lapSegHtml() {
-  return '<div class="seg" id="lapSeg"><button type="button" data-lt="prod" class="' + (S.lapTab === 'prod' ? 'on' : '') + '">🐑 Laporan produksi</button><button type="button" data-lt="keu" class="' + (S.lapTab === 'keu' ? 'on' : '') + '">💰 Laporan keuangan</button></div>';
+  return '<div class="seg" id="lapSeg"><button type="button" data-lt="prod" class="' + (S.lapTab === 'prod' ? 'on' : '') + '">Laporan produksi</button><button type="button" data-lt="keu" class="' + (S.lapTab === 'keu' ? 'on' : '') + '">Laporan keuangan</button></div>';
 }
 function renderLap() {
   var el = $('#s-lap'); if (!el || S.role === 'investor') return;
@@ -5139,9 +5257,9 @@ async function openDetail(tag) {
   var base = '<h3>' + esc(d.t) + ' ' + chip(d.s) + '</h3><p class="muted small" style="margin:0 0 8px">' + esc(d.j) + ' · ' + esc(d.k || '-') + ' · pemilik ' + esc(d.p || '-') +
     ' · masuk ' + esc(d.m || '-') + '</p><div class="grid2" style="margin-bottom:8px"><div class="kpi"><div class="v">' + (d.b != null ? nf1.format(d.b) : '-') + '</div><div class="l">Bobot terkini (kg)</div></div>' +
     '<div class="kpi"><div class="v">' + (d.g != null ? nf3.format(d.g) : '-') + '</div><div class="l">Kenaikan kg/hari</div></div></div>' +
-    '<div style="display:flex;gap:8px"><button class="btn sm" type="button" data-act="timbang" data-tag="' + esc(d.t) + '">⚖️ Timbang</button>' +
-    '<button class="btn sm ghost" type="button" data-act="kondisi" data-tag="' + esc(d.t) + '">🩺 Kondisi / kandang</button>' +
-    '<button class="btn sm ghost" type="button" data-act="media" data-tag="' + esc(d.t) + '">📷 Foto</button></div><div id="dtl" class="muted small" style="margin-top:12px">Memuat riwayat…</div>';
+    '<div style="display:flex;gap:8px"><button class="btn sm" type="button" data-act="timbang" data-tag="' + esc(d.t) + '">Timbang</button>' +
+    '<button class="btn sm ghost" type="button" data-act="kondisi" data-tag="' + esc(d.t) + '">Kondisi / kandang</button>' +
+    '<button class="btn sm ghost" type="button" data-act="media" data-tag="' + esc(d.t) + '">Foto</button></div><div id="dtl" class="muted small" style="margin-top:12px">Memuat riwayat…</div>';
   showSheet(base);
   try {
     var r = await api('wa_detail', S.pin, tag);
