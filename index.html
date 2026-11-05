@@ -92,6 +92,15 @@ input:focus,select:focus{outline:2px solid var(--g2);border-color:var(--g2)}
 .gal img{width:100%;height:100%;object-fit:cover;display:block}
 .gal .vid{display:flex;align-items:center;justify-content:center;font-size:30px;height:100%;background:#37474f}
 .gal small{position:absolute;left:0;right:0;bottom:0;background:rgba(0,0,0,.55);color:#fff;font-size:10px;padding:2px 5px}
+.brt{border:1px solid var(--bd);border-radius:14px;padding:12px;margin:0 0 10px;background:var(--card)}
+.brt h4{margin:0 0 2px;font-size:16px;line-height:1.3;color:var(--tx);overflow-wrap:anywhere}
+.brt .brt-m{font-size:12px;color:var(--mu);margin-bottom:6px}
+.brt p{margin:0 0 8px;white-space:pre-line;overflow-wrap:anywhere;font-size:14.5px;line-height:1.5;color:var(--tx)}
+.brt .gal{grid-template-columns:repeat(auto-fill,minmax(96px,1fr))}
+.brt .brt-x{margin-top:8px;display:flex;gap:8px;justify-content:flex-end}
+.brt-ring{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--bd)}.brt-ring:first-of-type{border-top:0}
+.brt-ring img,.brt-ring .no{width:52px;height:52px;border-radius:10px;object-fit:cover;flex:none;background:#e4eae5}
+.brt-ring b{display:block;font-size:14px;overflow-wrap:anywhere}.brt-ring span{font-size:12px;color:var(--mu)}
 .dthumb{width:46px;height:46px;border-radius:9px;object-fit:cover;background:#e4eae5;flex:none}
 .dthumb.no{display:flex;align-items:center;justify-content:center;font-size:22px}
 .rl{display:flex;align-items:center;gap:10px;min-width:0}
@@ -2951,7 +2960,7 @@ function loadSession() {
   try { var o = JSON.parse(store.get('qf_session') || 'null'); return o && o.pin ? o : null; } catch (e) { return null; }
 }
 function logout(msg) {
-  NOTIF.daftar = []; NOTIF.maks = 0; NOTIF.ts = 0; NOTIF._seen = null; try { nBadge(); } catch (e0) { /* abaikan */ }
+  NOTIF.daftar = []; NOTIF.maks = 0; NOTIF.ts = 0; NOTIF._seen = null; BER.daftar = []; BER.ts = 0; BER.tried = false; try { nBadge(); } catch (e0) { /* abaikan */ }
   cClear(); store.del('qf_session'); S.pin = ''; S.me = null; S.mut = null; S.akun = null; S.akunMenunggu = 0; S.ringkas = null; S.domba = null; S.inv = null; S.lap = null; S.dok = null; S.investor = ''; S.invPilih = ''; S.tab = 'home'; KDL.reset();
   $('#shell').hidden = true; $('#login').hidden = false; $('#pin').value = ''; showLoginBox(false);
   $('#loginErr').className = 'err'; $('#loginErr').textContent = msg || '';
@@ -3293,6 +3302,7 @@ function renderSesi(k) {
 }
 
 var ICP = {
+  news: '<path d="M4 5h13v14H6a2 2 0 0 1-2-2z"/><path d="M17 9h3v8a2 2 0 0 1-2 2"/><path d="M8 9h5"/><path d="M8 13h5"/>',
   user: '<circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 4-6.5 8-6.5s8 2.5 8 6.5"/>',
   swap: '<path d="M7 7h12"/><path d="m16 3 4 4-4 4"/><path d="M17 17H5"/><path d="m8 13-4 4 4 4"/>',
   home: '<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M10 20v-6h4v6"/>',
@@ -3448,7 +3458,7 @@ function initAdd() {
 /* ---------------- menu samping (drawer) ---------------- */
 var DOPEN = {};
 function drwTree() {
-  if (S.role === 'investor') return [{ id: 'inv', e: 'case', l: 'Portofolio', go: ['inv'] }, { id: 'notif', e: 'bell', l: 'Notifikasi', badge: nUnread(), fn: 'notif' }, { id: 'akun', e: 'user', l: 'Akun saya', fn: 'akun' }];
+  if (S.role === 'investor') return [{ id: 'inv', e: 'case', l: 'Portofolio', go: ['inv'] }, { id: 'berita', e: 'news', l: 'Berita kandang', fn: 'berita' }, { id: 'notif', e: 'bell', l: 'Notifikasi', badge: nUnread(), fn: 'notif' }, { id: 'akun', e: 'user', l: 'Akun saya', fn: 'akun' }];
   var kd = [['beranda', 'Tugas'], ['pakan', 'Pemberian Pakan'], ['peta', 'Peta Kandang'], ['catat', 'Timbang & Stok'], ['stok', 'Stok Pakan'], ['silase', 'Silase'], ['analisis', 'Analisis'], ['grafik', 'Grafik & Simulasi'], ['mitigasi', 'Mitigasi'], ['ransum', 'Ransum']];
   var inp = [['timbang', 'Timbang'], ['kondisi', 'Kondisi'], ['media', 'Foto & video'], ['massal', 'Timbang massal'], ['pakan', 'Stok pakan']];
   var T = [{ id: 'home', e: 'home', l: 'Beranda', go: ['home'] }, { id: 'domba', e: 'tag', l: 'Domba', go: ['domba'] },
@@ -3463,6 +3473,7 @@ function drwTree() {
       { id: 'keu.lap', e: 'chart', l: 'Laporan keuangan', go: ['keu', 'lap'] },
       { id: 'keu.input', e: 'pencil', l: 'Input', kids: [['catat', 'Catat kas'], ['inv', 'Invoice'], ['kw', 'Kuitansi'], ['pel', 'Pelanggan']].map(function (x) { return { id: 'keu.input.' + x[0], l: x[1], go: ['keu', 'input', x[0]] }; }) }] });
     T.push({ id: 'inv', e: 'case', l: 'Investor', go: ['inv'] });
+    T.push({ id: 'berita', e: 'news', l: 'Berita kandang', fn: 'berita' });
     T.push({ id: 'notif', e: 'bell', l: 'Notifikasi', badge: nUnread(), fn: 'notif' });
     T.push({ id: 'pengguna', e: 'user', l: 'Pengguna', badge: S.akunMenunggu || 0, fn: 'pengguna' });
   }
@@ -3532,7 +3543,7 @@ function initDrawer() {
     var b = e.target.closest('[data-d]'); if (!b) return;
     var n = drwFindNode(drwTree(), b.getAttribute('data-d')); if (!n) return;
     if (n.kids) { DOPEN[n.id] = !DOPEN[n.id]; drwRender(); return; }
-    if (n.fn) { drwClose(); if (n.fn === 'pengguna') akunPengguna(); else if (n.fn === 'notif') nBuka(); else showMenu(); return; }
+    if (n.fn) { drwClose(); if (n.fn === 'pengguna') akunPengguna(); else if (n.fn === 'notif') nBuka(); else if (n.fn === 'berita') beritaBuka(); else showMenu(); return; }
     drwGo(n.go);
   });
   var x0 = null, y0 = 0;
@@ -3766,7 +3777,8 @@ async function addFotos(key, input, prevId) {
   var files = Array.prototype.slice.call(input.files || []);
   input.value = '';
   for (var i = 0; i < files.length; i++) {
-    if (S.fotos[key].length >= 3) { toast('Maksimal 3 foto per simpan', 'warn'); break; }
+    var mx = key === 'b' ? 5 : 3;
+    if (S.fotos[key].length >= mx) { toast('Maksimal ' + mx + ' foto per simpan', 'warn'); break; }
     if (!/^image\//.test(files[i].type)) { toast('Hanya file gambar yang bisa dipilih di sini', 'warn'); continue; }
     try { S.fotos[key].push(await readImage(files[i])); }
     catch (e) { toast('Foto ' + files[i].name + ' gagal dibaca', 'err'); }
@@ -3781,7 +3793,7 @@ function renderPrev(key, id) {
 function hapusFoto(e) {
   var b = e.target.closest('[data-rm]'); if (!b) return;
   var p = b.getAttribute('data-rm').split(':');
-  S.fotos[p[0]].splice(Number(p[1]), 1); renderPrev(p[0], p[0] === 't' ? 't-prev' : 'm-prev');
+  S.fotos[p[0]].splice(Number(p[1]), 1); renderPrev(p[0], p[0] + '-prev');
 }
 function onPilihVideo() {
   var f = this.files && this.files[0]; this.value = '';
@@ -3902,6 +3914,7 @@ function renderInv() {
   var P = r.portofolio, B = r.bagiHasil, SK = B.skenario, A = r.asumsi;
   var sendiri = B.sendiri;
   if (!adm) h += welcomeHtml(r.investor);
+  h += beritaKartu();
   h += nLaporanKartu();
   h += '<div class="muted small" style="margin:10px 2px 8px">Portofolio ' + esc(r.investor) + ' · per ' + esc(r.diperbarui) + (B.batch ? ' · ' + esc(B.batch) : '') + (sendiri ? '' : ' · bagi hasil ' + pct0(B.pctPengelola) + ' pengelola : ' + pct0(B.pctInvestor) + ' pemodal') + '</div>';
   if (B.bawaan && !sendiri) h += '<div class="asm" style="margin:0 0 8px">Investor ini belum ada di sheet Bagi_Hasil, dipakai bagi hasil bawaan 50:50.</div>';
@@ -5488,7 +5501,7 @@ function nWaktu(w) {
 function nIsi() {
   var seen = NOTIF._seen != null ? NOTIF._seen : nSeen(), L = NOTIF.daftar || [];
   $('#nt-list').innerHTML = L.length ? L.map(function (x) {
-    return '<div class="nt ' + esc(x.tingkat) + (x.id > seen ? ' baru' : '') + '"><b>' + esc(x.judul) + '</b>' + (x.isi ? '<div class="ni">' + esc(x.isi) + '</div>' : '') + '<div class="nw">' + nWaktu(x.w) + '</div></div>';
+    return '<div class="nt ' + esc(x.tingkat) + (x.id > seen ? ' baru' : '') + '"' + (x.jenis === 'berita' ? ' data-nj="berita" style="cursor:pointer"' : '') + '><b>' + esc(x.judul) + '</b>' + (x.isi ? '<div class="ni">' + esc(x.isi) + '</div>' : '') + '<div class="nw">' + nWaktu(x.w) + '</div></div>';
   }).join('') : '<p class="muted small">Belum ada pemberitahuan. Pemberitahuan muncul saat ada domba masuk, ditimbang, atau berubah kondisi' + (S.role === 'admin' ? ', pakan menipis, dan rekap timbang bulanan.' : '.') + '</p>';
 }
 async function nBuka() {
@@ -5819,6 +5832,131 @@ function nInitUi() {
   nMulaiPoll();
 }
 
+/* ---------------- Berita kandang (foto/video + keterangan; pengelola menulis, investor membaca) ---------------- */
+var BER = { daftar: [], total: 0, ts: 0, memuat: false, tried: false };
+function beritaMuat(done) {
+  if (!S.pin || (S.role !== 'admin' && S.role !== 'investor') || BER.memuat) return;
+  BER.memuat = true; BER.tried = true;
+  var ca = cGet('berita'); if (ca && !BER.ts && ca.daftar) { BER.daftar = ca.daftar; BER.total = ca.total || ca.daftar.length; }
+  api('wa_berita', S.pin).then(function (r) {
+    BER.memuat = false;
+    if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
+    if (r.ok) { BER.daftar = r.daftar || []; BER.total = r.total || BER.daftar.length; BER.ts = Date.now(); cSet('berita', r); BER.gagal = false; }
+    else { BER.gagal = r.error || 'Gagal memuat berita'; }
+    if (done) done();
+  }).catch(function () { BER.memuat = false; BER.gagal = 'Tidak ada sinyal. Menampilkan data terakhir.'; if (done) done(); });
+}
+function beritaMedia(m) {
+  var L = (m || []).filter(function (x) { return /^https:\/\//.test(x.url || ''); });
+  if (!L.length) return '';
+  return '<div class="gal">' + L.map(function (x) {
+    var inner = (x.j === 'foto' && /^https:\/\//.test(x.thumb || '')) ? '<img src="' + esc(x.thumb) + '" loading="lazy" alt="Foto kegiatan kandang" referrerpolicy="no-referrer">' : '<div class="vid">' + (x.j === 'foto' ? 'Foto' : 'Video') + '</div>';
+    return '<a href="' + esc(x.url) + '" target="_blank" rel="noopener">' + inner + '</a>';
+  }).join('') + '</div>';
+}
+function beritaItem(b) {
+  var adm = S.role === 'admin';
+  return '<article class="brt"><h4>' + esc(b.judul) + '</h4><div class="brt-m">' + esc(tglPanjangB(b.d)) + (adm && b.oleh ? ' · ' + esc(b.oleh) : '') + '</div>' +
+    (b.isi ? '<p>' + esc(b.isi) + '</p>' : '') + beritaMedia(b.media) +
+    (adm ? '<div class="brt-x"><button type="button" class="btn sm ghost" data-bdel="' + Number(b.id) + '">Hapus</button></div>' : '') + '</article>';
+}
+function tglPanjangB(s) {
+  var m = /^(\d{4})-(\d{2})-(\d{2})/.exec(s || ''); if (!m) return s || '';
+  return Number(m[3]) + ' ' + BLN_L[Number(m[2]) - 1] + ' ' + m[1];
+}
+function beritaIsi() {
+  var el = $('#br-list'); if (!el) return;
+  var L = BER.daftar || [];
+  el.innerHTML = (BER.gagal ? '<p class="muted small">' + esc(BER.gagal) + '</p>' : '') +
+    (L.length ? L.map(beritaItem).join('') : (BER.memuat || !BER.ts ? '<p class="muted small">Memuat…</p>' : '<p class="muted small">Belum ada berita.' + (S.role === 'admin' ? ' Tekan "Tulis berita" untuk membagikan kabar kandang ke investor.' : '') + '</p>'));
+}
+function beritaBuka() {
+  BER.gagal = '';
+  showSheet('<h3>Berita kandang</h3><p class="muted small" style="margin:0 0 10px">' + (S.role === 'admin' ? 'Kabar, foto, dan video kegiatan di kandang. Semua investor bisa melihatnya.' : 'Kabar, foto, dan video kegiatan terbaru dari kandang.') + '</p>' +
+    (S.role === 'admin' ? '<button class="btn" type="button" id="br-baru" style="margin-bottom:12px">+ Tulis berita</button>' : '') + '<div id="br-list"></div>');
+  beritaIsi();
+  beritaMuat(beritaIsi);
+}
+function beritaForm() {
+  if (S.role !== 'admin') return;
+  S.fotos.b = []; S.videoB = null;
+  showSheet('<h3>Tulis berita</h3><form id="br-form" autocomplete="off">' +
+    '<label>Judul</label><input type="text" id="b-judul" maxlength="120" placeholder="Mis. 20 ekor domba baru tiba" required>' +
+    '<label>Tanggal kegiatan</label><input type="date" id="b-tgl" value="' + today() + '" required>' +
+    '<label>Keterangan</label><textarea id="b-isi" rows="4" maxlength="2000" placeholder="Ceritakan kegiatan atau kondisi di kandang"></textarea>' +
+    '<label>Foto (maks 5)</label><div class="pick"><button class="btn sm ghost" type="button" data-bp="b-cam">Kamera</button><button class="btn sm ghost" type="button" data-bp="b-gal">Galeri</button></div>' +
+    '<input type="file" id="b-cam" accept="image/*" capture="environment" hidden><input type="file" id="b-gal" accept="image/*" multiple hidden><div id="b-prev" class="thumbs"></div>' +
+    '<label>Video (maks ±11 MB)</label><div class="pick"><button class="btn sm ghost" type="button" data-bp="b-vid">Pilih / rekam video</button></div>' +
+    '<input type="file" id="b-vid" accept="video/mp4,video/quicktime,video/webm,video/*" hidden><div id="b-vinfo" class="hint"></div>' +
+    '<label>atau tempel tautan video (Google Drive / YouTube)</label><input type="text" id="b-link" inputmode="url" placeholder="https://..." autocapitalize="off">' +
+    '<button class="btn" type="submit" id="b-kirim" style="margin-top:14px">Terbitkan</button> <button class="btn ghost" type="button" id="br-batal" style="margin-top:8px">Batal</button></form>');
+}
+function beritaVideo(inp) {
+  var f = inp.files && inp.files[0]; inp.value = '';
+  var info = $('#b-vinfo'); S.videoB = null;
+  if (!f) { info.textContent = ''; info.className = 'hint'; return; }
+  if (!/^video\//.test(f.type)) { info.textContent = 'Bukan file video'; info.className = 'hint bad'; return; }
+  if (f.size > 11500000) { info.textContent = 'Video ' + nf1.format(f.size / 1048576) + ' MB terlalu besar (maks ±11 MB). Unggah ke Google Drive lalu tempel tautannya di bawah.'; info.className = 'hint bad'; return; }
+  var rd = new FileReader();
+  rd.onload = function () {
+    var mime = f.type === 'video/quicktime' || f.type === 'video/webm' ? f.type : 'video/mp4';
+    S.videoB = { mime: mime, data: String(rd.result).split(',')[1], mb: f.size / 1048576 };
+    info.textContent = f.name + ' · ' + nf1.format(S.videoB.mb) + ' MB siap diunggah'; info.className = 'hint ok';
+  };
+  rd.onerror = function () { info.textContent = 'Video gagal dibaca'; info.className = 'hint bad'; };
+  rd.readAsDataURL(f);
+}
+async function beritaKirim() {
+  var judul = $('#b-judul').value.trim(), isi = $('#b-isi').value.trim(), link = $('#b-link').value.trim(), tgl = $('#b-tgl').value;
+  if (!judul) { toast('Judul wajib diisi', 'err'); return; }
+  if (!isi && !S.fotos.b.length && !S.videoB && !link) { toast('Isi keterangan, foto, video, atau tautan', 'err'); return; }
+  if (link && !/^https:\/\//.test(link)) { toast('Tautan harus diawali https://', 'err'); return; }
+  var btn = $('#b-kirim'); btn.disabled = true; btn.textContent = 'Menerbitkan…';
+  var r = await kirim('berita', { judul: judul, isi: isi, tanggal: tgl, link: link,
+    fotos: S.fotos.b.map(function (x) { return { mime: x.mime, data: x.data }; }), video: S.videoB ? { mime: S.videoB.mime, data: S.videoB.data } : null }, 'Berita: ' + judul);
+  if (!r.ok) { btn.disabled = false; btn.textContent = 'Terbitkan'; return; }
+  S.fotos.b = []; S.videoB = null;
+  if (r.queued) { closeSheet(); return; }
+  BER.ts = 0; BER.daftar = BER.daftar || []; beritaBuka();
+}
+function beritaKartu() {
+  if (!BER.tried) beritaMuat(function () { if (S.tab === 'inv' && !$('#s-inv').hidden) renderInv(); });
+  var L = (BER.daftar || []).slice(0, 2);
+  if (!L.length) return '';
+  return '<div class="card"><h3>Kabar dari kandang</h3>' + L.map(function (b) {
+    var f = (b.media || []).filter(function (x) { return x.j === 'foto' && /^https:\/\//.test(x.thumb || ''); })[0];
+    return '<div class="brt-ring">' + (f ? '<img src="' + esc(f.thumb) + '" alt="" loading="lazy" referrerpolicy="no-referrer">' : '<div class="no"></div>') +
+      '<div><b>' + esc(b.judul) + '</b><span>' + esc(tglPanjangB(b.d)) + '</span></div></div>';
+  }).join('') + '<button class="btn ghost" type="button" id="br-semua" style="margin-top:8px">Lihat semua berita</button></div>';
+}
+function beritaInit() {
+  document.addEventListener('click', function (e) {
+    var t = e.target; if (!t || !t.closest) return;
+    if (t.id === 'br-semua') { beritaBuka(); return; }
+    if (t.id === 'br-baru') { beritaForm(); return; }
+    if (t.id === 'br-batal') { beritaBuka(); return; }
+    var pk = t.closest('[data-bp]'); if (pk) { var inp = $('#' + pk.getAttribute('data-bp')); if (inp) inp.click(); return; }
+    var nj = t.closest('[data-nj="berita"]'); if (nj) { beritaBuka(); return; }
+    var rm = t.closest('#b-prev [data-rm]'); if (rm) { hapusFoto({ target: rm }); return; }
+    var dl = t.closest('[data-bdel]');
+    if (dl) {
+      if (dl.getAttribute('data-sure') !== '1') { dl.setAttribute('data-sure', '1'); dl.textContent = 'Yakin hapus?'; setTimeout(function () { if (dl.isConnected) { dl.removeAttribute('data-sure'); dl.textContent = 'Hapus'; } }, 4000); return; }
+      dl.disabled = true;
+      api('wa_berita_hapus', S.pin, Number(dl.getAttribute('data-bdel'))).then(function (r) {
+        if (r.pinSalah) { logout('Sesi berakhir: akun atau kata sandi berubah. Masuk lagi.'); return; }
+        if (!r.ok) { toast(r.error || 'Gagal menghapus', 'err'); dl.disabled = false; return; }
+        toast('Berita dihapus', 'ok'); BER.ts = 0; beritaBuka();
+      }).catch(function () { toast('Tidak ada sinyal. Coba lagi.', 'err'); dl.disabled = false; });
+    }
+  });
+  document.addEventListener('change', function (e) {
+    var t = e.target; if (!t || !t.id) return;
+    if (t.id === 'b-cam' || t.id === 'b-gal') addFotos('b', t, 'b-prev');
+    else if (t.id === 'b-vid') beritaVideo(t);
+  });
+  document.addEventListener('submit', function (e) { if (e.target && e.target.id === 'br-form') { e.preventDefault(); beritaKirim(); } });
+}
+
 /* ---------------- Keuangan > Mutasi (uang masuk/keluar per bulan + penginput) ---------------- */
 var BLN = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 function bulanLabel(ym) { var m = /^(\d{4})-(\d{2})$/.exec(ym || ''); return m ? BLN[Number(m[2]) - 1] + ' ' + m[1] : ym; }
@@ -5951,7 +6089,7 @@ document.addEventListener('DOMContentLoaded', function () {
   if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol) && !inAppsScript()) (function () { var had = !!navigator.serviceWorker.controller, rl = false; navigator.serviceWorker.addEventListener('controllerchange', function () { if (had && !rl) { rl = true; location.reload(); } }); navigator.serviceWorker.register('sw.js').then(function (r) { try { r.update(); } catch (e) {} }).catch(function () {}); document.addEventListener('visibilitychange', function () { if (!document.hidden) navigator.serviceWorker.getRegistration().then(function (r) { r && r.update(); }).catch(function () {}); }); })();
   $$('[data-logo]').forEach(function (i) { i.src = LOGO; });
   initDrawer();
-  nInitUi();
+  nInitUi(); beritaInit();
   try { (DSK.addEventListener ? DSK.addEventListener('change', dskSidebar) : DSK.addListener(dskSidebar)); } catch (e) { /* abaikan */ }
   $('#btnLogin').addEventListener('click', doLogin);
   $('#pin').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });

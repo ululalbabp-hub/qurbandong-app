@@ -29,7 +29,7 @@ D. PASANG DI HP
    Hapus pintasan lama dari script.google.com agar tidak tertukar. Masuk dengan PIN pengelola / staf / investor.
 
 E. UPDATE
-   Setelah ada Index.html baru: unggah ulang file dari paket baru (index.html + sw.js) ke repo. Versi cache sekarang qf-v50;
+   Setelah ada Index.html baru: unggah ulang file dari paket baru (index.html + sw.js) ke repo. Versi cache sekarang qf-v51;
    tutup lalu buka aplikasi dua kali agar HP memuat versi baru.
 
 CATATAN
