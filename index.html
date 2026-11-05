@@ -938,6 +938,8 @@ html[data-tema=dark] .saldo .saldo-h{background:#1f4a27!important}
 .me-form label{margin-top:10px}
 .me-form .me-jn{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
 .me-form .me-jn button{padding:10px;border:1px solid var(--bd);border-radius:10px;background:transparent;color:var(--tx);font:inherit;font-weight:600;cursor:pointer}
+.me-form .me-jn button:disabled{cursor:default;opacity:1}
+.me-form .me-jn button:disabled:not(.on){opacity:.45}
 .me-form .me-jn button.on{background:#0d4715;color:#fff;border-color:#0d4715}
 html[data-tema=dark] .me-form .me-jn button.on{background:#2d6a37;border-color:#2d6a37}
 .me-form .me-old{font-size:12.5px;color:var(--mu);background:var(--tint);border-radius:10px;padding:8px 10px;margin:0 0 6px}
@@ -5884,13 +5886,15 @@ function mutEdit(i) {
   if (!t || !r.bisaEdit || !t.id) return;
   var jenis = t.masuk > 0 ? 'masuk' : 'keluar', jml = t.masuk > 0 ? t.masuk : t.keluar;
   var kats = (r.kategori && r.kategori.length ? r.kategori.slice() : []); r.rows.forEach(function (x) { if (x.kat && kats.indexOf(x.kat) < 0) kats.push(x.kat); });
-  var mets = ['Tunai', 'Transfer']; if (t.metode && mets.indexOf(t.metode) < 0) mets.push(t.metode);
+  var mets = ['Tunai', 'Transfer', 'Lainnya']; if (t.metode && mets.indexOf(t.metode) < 0) mets.push(t.metode);
+  var kMasuk = r.katMasuk || null, jenisDari = function (k) { return kMasuk ? (kMasuk.indexOf(k) >= 0 ? 'masuk' : 'keluar') : null; };
+  if (kats.indexOf(t.kat) < 0) kats.unshift(t.kat);
   showSheet('<h3>Ubah transaksi</h3><form id="me-f" class="me-form" autocomplete="off">' +
     '<div class="me-old">Semula: ' + esc(tglPendek(t.d)) + ' · ' + esc(t.kat) + ' · <b>' + (t.masuk > 0 ? '+ ' : '− ') + esc(rp(jml)) + '</b>' + (t.metode ? ' · ' + esc(t.metode) : '') + '</div>' +
-    '<label>Jenis</label><div class="me-jn"><button type="button" data-jn="masuk" class="' + (jenis === 'masuk' ? 'on' : '') + '">Uang masuk</button><button type="button" data-jn="keluar" class="' + (jenis === 'keluar' ? 'on' : '') + '">Uang keluar</button></div>' +
+    '<label>Jenis' + (kMasuk ? ' <span class="muted small">(mengikuti kategori)</span>' : '') + '</label><div class="me-jn"><button type="button" data-jn="masuk" class="' + (jenis === 'masuk' ? 'on' : '') + '">Uang masuk</button><button type="button" data-jn="keluar" class="' + (jenis === 'keluar' ? 'on' : '') + '">Uang keluar</button></div>' +
     '<label>Tanggal</label><input type="date" id="me-d" value="' + esc(t.d) + '" required>' +
     '<label>Jumlah (Rp)</label><input type="text" id="me-j" inputmode="numeric" value="' + nf0.format(jml) + '" required>' +
-    '<label>Kategori</label><input type="text" id="me-k" list="me-kl" value="' + esc(t.kat) + '" required><datalist id="me-kl">' + kats.map(function (k) { return '<option value="' + esc(k) + '">'; }).join('') + '</datalist>' +
+    '<label>Kategori</label><select id="me-k">' + kats.map(function (k) { return '<option' + (k === t.kat ? ' selected' : '') + '>' + esc(k) + '</option>'; }).join('') + '</select>' +
     '<label>Keterangan</label><input type="text" id="me-ket" value="' + esc(t.ket || '') + '">' +
     '<label>Metode</label><select id="me-m">' + mets.map(function (m) { return '<option' + (m === t.metode ? ' selected' : '') + '>' + esc(m) + '</option>'; }).join('') + '</select>' +
     '<label>Alasan perubahan (wajib)</label><input type="text" id="me-a" placeholder="mis. salah ketik nominal" required>' +
@@ -5898,12 +5902,14 @@ function mutEdit(i) {
   var f = $('#me-f'), jn = jenis, msg = function (x) { $('#me-msg').textContent = x; };
   $$('[data-jn]', f).forEach(function (b) { b.addEventListener('click', function () { jn = b.getAttribute('data-jn'); $$('[data-jn]', f).forEach(function (o) { o.classList.toggle('on', o === b); }); }); });
   $('#me-j').addEventListener('input', function () { var n = kasAngka(this.value); this.value = n ? nf0.format(n) : ''; });
+  var setJn = function (v) { jn = v; $$('[data-jn]', f).forEach(function (o) { o.classList.toggle('on', o.getAttribute('data-jn') === v); }); };
+  if (kMasuk) { $$('[data-jn]', f).forEach(function (o) { o.disabled = true; o.title = 'Mengikuti kategori'; }); $('#me-k').addEventListener('change', function () { setJn(jenisDari(this.value)); }); }
   f.addEventListener('submit', async function (e) {
     e.preventDefault();
     var p = { id: t.id, d: $('#me-d').value, jenis: jn, jumlah: kasAngka($('#me-j').value), kat: $('#me-k').value.trim(), ket: $('#me-ket').value.trim(), metode: $('#me-m').value, alasan: $('#me-a').value.trim(),
               lama: { d: t.d, masuk: t.masuk, keluar: t.keluar, kat: t.kat, ket: t.ket || '', metode: t.metode || '' } };
     if (!/^\d{4}-\d{2}-\d{2}$/.test(p.d)) { msg('Tanggal belum benar'); return; }
-    if (!(p.jumlah > 0)) { msg('Jumlah harus lebih dari 0'); return; }
+    if (!(p.jumlah >= 100)) { msg('Jumlah minimal Rp 100'); return; }
     if (!p.kat) { msg('Kategori wajib diisi'); return; }
     if (p.alasan.length < 3) { msg('Tulis alasan perubahan'); return; }
     if (p.d === p.lama.d && p.kat === p.lama.kat && p.ket === p.lama.ket && p.metode === p.lama.metode && (jn === 'masuk' ? p.jumlah === t.masuk && !t.keluar : p.jumlah === t.keluar && !t.masuk)) { msg('Belum ada yang diubah'); return; }
