@@ -343,6 +343,7 @@ input:focus,select:focus{outline:2px solid var(--o);border-color:var(--o)}
 #s-kandang .er .tg{font-weight:800;color:var(--accent)}
 #s-kandang .er .amt{font-variant-numeric:tabular-nums;text-align:right;font-size:14px;font-weight:700}
 #s-kandang .er .sub{font-size:12.5px;color:var(--muted)}
+#s-kandang .t tr.gapr td{background:var(--bad-soft)}
 #s-kandang .wlist{display:grid;gap:8px}
 #s-kandang .wrow{display:grid;grid-template-columns:minmax(0,1fr) 7.5em;gap:10px;align-items:center;background:var(--surface);border-radius:var(--rs);box-shadow:var(--shadow);padding:10px 12px}
 #s-kandang .wrow .tg{font-weight:800;color:var(--accent)}
@@ -1834,7 +1835,7 @@ function stokCalc(){
 }
 const STC={habis:['bad','Habis'],kritis:['bad','Kritis'],waspada:['warn','Waspada'],aman:['ok','Aman'],none:['','Tidak dipakai ransum']};
 const satuan=b=>b&&/liter/i.test(b.sat)?'L':'kg';
-function rStok(){
+function rStokUtama(){
   const X=stokCalc(),N=NM();
   if(!X)return `${syncBanner()}<section class="blk"><h2>Stok pakan</h2><div class="panel"><p>Data stok belum terbaca dari QDF (sheet Pengaturan & Input_Pakan). Pastikan Code.gs versi terbaru sudah dipasang lalu muat ulang.</p><button class="btn ghost" data-act="syncNow">Muat ulang</button></div></section>`;
   const tot=X.items.reduce((a,b)=>a+b.nilai,0),sb=X.by[N.sil],bad=X.items.filter(b=>b.st==='kritis'||b.st==='habis').length;
@@ -1877,8 +1878,85 @@ function rStok(){
   </section>`;
 }
 
+/* ============ MUTASI PAKAN (khusus pengelola) ============ */
+/* Pemakaian dicatat SESUDAH dipakai. Transaksi bertanggal D untuk "N hari" mencakup N hari yang berakhir di D (sama dengan analisis). */
+const isoD=d=>d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+const HRN=['Min','Sen','Sel','Rab','Kam','Jum','Sab'];
+function mutasiCalc(){
+  const X=stokCalc();if(!X)return null;
+  const N=NM(),K=X.K,tx=X.tx||[];
+  const exp=[[N.sil,K.sil],[N.odot,K.od],[N.kons,K.kt]].filter(a=>a[1]>0&&X.by[a[0]]).map(a=>a[0]);
+  const today=todayISO(),t0=pd(today),cov={},rk={},lain={};
+  exp.forEach(n=>{cov[n]={};rk[n]={}});
+  let first=null,last=null;
+  tx.forEach(t=>{
+    if(!t.tgl)return;
+    const ket=t.ket||'',susut=/susut pelayuan/i.test(ket),bahan=t.trx==='Keluar'&&/bahan silase/i.test(ket),kor=/^koreksi/i.test(ket);
+    if(t.trx==='Keluar'&&exp.indexOf(t.jenis)>=0&&!susut&&!bahan&&!kor){
+      const mH=ket.match(/(\d+)\s*hari/i),span=mH?Math.max(1,+mH[1]):/mingguan/i.test(ket)?7:1,end=pd(t.tgl);
+      for(let i=0;i<span;i++){const k=isoD(addD(end,-i));cov[t.jenis][k]=(cov[t.jenis][k]||0)+t.kg/span;if(span>1)rk[t.jenis][k]=span}
+      const s0=isoD(addD(end,-(span-1)));if(!first||s0<first)first=s0;if(!last||t.tgl>last)last=t.tgl;
+    }else if(!susut&&!bahan){
+      (lain[t.tgl]=lain[t.tgl]||[]).push((kor?'Koreksi':t.trx)+' '+t.jenis+' '+(t.trx==='Masuk'?'+':'−')+nf(t.kg,1));
+    }
+  });
+  const H=CT.mutHari||14,rows=[];
+  for(let i=0;i<H;i++){
+    const d=addD(t0,-i),iso=isoD(d),isToday=i===0,pre=!first||iso<first;
+    const cells=exp.map(n=>cov[n][iso]!=null?{kg:cov[n][iso],rk:rk[n][iso]||0}:null);
+    const kosong=exp.filter((n,j)=>!cells[j]);
+    rows.push({iso,d,isToday,pre,cells,miss:(!pre&&!isToday)?kosong:[],lain:lain[iso]||[]});
+  }
+  const runs=[];
+  for(let i=rows.length-1;i>=0;i--){const r=rows[i];if(!r.miss.length)continue;
+    const key=r.miss.join('|'),p=runs[runs.length-1];
+    if(p&&p.key===key&&p.toIso===isoD(addD(r.d,-1))){p.toIso=r.iso;p.to=r.d;p.len++}
+    else runs.push({key,feeds:r.miss,fromIso:r.iso,from:r.d,toIso:r.iso,to:r.d,len:1});
+  }
+  runs.reverse();
+  return {exp,rows,runs,nHari:rows.filter(r=>r.miss.length).length,none:!first||!exp.length,first,last,telat:last?Math.max(0,days(pd(last),t0)):null,H};
+}
+function rMutasi(M){
+  const chips=[7,14,30].map(h=>`<button data-act="mutHari" data-v="${h}" aria-pressed="${M.H===h}">${h} hari</button>`).join('');
+  if(M.none)return `<section class="blk"><h2>Mutasi pakan</h2><div class="panel">${M.exp.length?'<p>Belum ada pemakaian pakan yang tercatat, jadi belum ada yang bisa dibandingkan. Setelah pemakaian pertama dicatat, hari yang terlewat akan muncul di sini.</p><button class="btn orange" data-act="goStok" data-v="pakai">Catat pemakaian</button>':'<p>Belum ada pakan yang dipantau karena jadwal pakan aktif kosong (tidak ada domba aktif, atau ransum tidak memakai silase, odot, maupun konsentrat). Mutasi pakan muncul begitu ada domba aktif.</p>'}</div></section>`;
+  const lastTxt=M.telat===0?'hari ini':M.telat+' hari lalu';
+  const gap=M.runs.length?`<div class="elist">${M.runs.map(g=>{
+    const lbl=g.len>1?fdS(g.from)+' – '+fdS(g.to):fdS(g.from);
+    return `<div class="er"><div><span class="tg" style="color:var(--bad)">${lbl}</span> <span class="sub">${g.len} hari</span><div class="sub">Belum ada: ${g.feeds.map(esc).join(', ')}</div></div><button class="btn sm orange" data-act="mutCatat" data-v="${g.toIso}|${g.len}|${g.feeds.map(encodeURIComponent).join(',')}">Catat</button></div>`}).join('')}</div>`
+    :`<div class="verdict ok"><b>Semua hari terisi</b><div>Tidak ada hari yang terlewat dalam ${M.H} hari terakhir.</div></div>`;
+  const head=`<tr><th>Tanggal</th>${M.exp.map(n=>`<th>${esc(n)}</th>`).join('')}<th>Mutasi lain</th></tr>`;
+  const body=M.rows.map(r=>{
+    const tds=r.cells.map(c=>{
+      if(r.pre)return '<td class="muted">·</td>';
+      if(c)return `<td>${c.rk?`<span title="rekap ${c.rk} hari">~${nf(c.kg,0)}</span>`:nf(c.kg,0)}</td>`;
+      return r.isToday?'<td class="muted small">menunggu</td>':`<td>${chip('bad','Belum')}</td>`}).join('');
+    return `<tr${r.miss.length?' class="gapr"':''}><td class="l">${HRN[r.d.getDay()]}, ${fdS(r.d)}${r.isToday?' <span class="small muted">hari ini</span>':''}</td>${tds}<td class="l small" style="white-space:normal;min-width:150px">${r.lain.length?r.lain.map(esc).join(' · '):'<span class="muted">—</span>'}</td></tr>`}).join('');
+  return `<section class="blk">
+    <h2>Mutasi pakan</h2>
+    <p class="lead">Pemakaian dicatat sesudah pakan dipakai. Tanggal transaksi = hari terakhir yang dicakup, dan "untuk N hari" berarti N hari mundur dari tanggal itu. Hari ini belum dihitung terlewat karena biasanya baru dicatat sore atau besok.</p>
+    <div class="kchips" style="margin:0 0 14px">${chips}</div>
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Hari belum terinput</div><div class="v" style="color:var(--${M.nHari?'bad':'ok'})">${M.nHari}</div><div class="s">dalam ${M.H} hari terakhir</div></div>
+      <div class="kpi"><div class="lbl">Pemakaian terakhir tercatat</div><div class="v">${fdS(pd(M.last))}</div><div class="s">${lastTxt}</div></div>
+      <div class="kpi"><div class="lbl">Pakan yang dipantau</div><div class="v" style="font-size:16px">${M.exp.map(esc).join(', ')}</div><div class="s">sesuai jadwal pakan aktif</div></div>
+    </div>
+  </section>
+  <section class="blk"><h3>Perlu dilengkapi</h3>${gap}</section>
+  <section class="blk"><h3>Mutasi per hari</h3>
+    <p class="note">Angka = kg per hari. Tanda ~ berarti hasil bagi rata dari rekap beberapa hari. Titik (·) = sebelum pencatatan pemakaian dimulai (${M.first?fdS(pd(M.first)):'—'}).</p>
+    <div class="tw"><table class="t"><thead>${head}</thead><tbody>${body}</tbody></table></div>
+  </section>`;
+}
+function rStok(){
+  if(!isAdmin())return rStokUtama();
+  const M=mutasiCalc(),sub=CT.stokSub==='mutasi'?'mutasi':'stok';
+  const bdg=M&&!M.none&&M.nHari?` (${M.nHari} kosong)`:'';
+  const tg=`<div class="kchips" style="margin:0 0 14px"><button data-act="stokSub" data-v="stok" aria-pressed="${sub==='stok'}">Stok terkini</button><button data-act="stokSub" data-v="mutasi" aria-pressed="${sub==='mutasi'}">Mutasi pakan${bdg}</button></div>`;
+  return tg+(sub==='mutasi'&&M?rMutasi(M):rStokUtama());
+}
+
 /* ---- Formulir stok (di menu Catat) ---- */
-Object.assign(CT,{seg:'timbang',sk:'silase',busyS:false,busyM:false,
+Object.assign(CT,{seg:'timbang',sk:'silase',busyS:false,busyM:false,stokSub:'stok',mutHari:14,
   sb:{opsi:-1,ampas:'',v:{},paksa:false,ket:''},
   pk:{hari:1,v:{},paksa:false,ket:''},
   bl:{jenis:'',kg:'',harga:'',ket:''},
@@ -2790,6 +2868,12 @@ ROOT().addEventListener('click',e=>{
   if(a==='anBatch'){AN.batch=v;render();return}
   if(a==='anKondisi'){O.goInput('kondisi',v);return}
   if(a==='sk'){CT.sk=v;render();return}
+  if(a==='stokSub'){CT.stokSub=v==='mutasi'?'mutasi':'stok';render();return}
+  if(a==='mutHari'){CT.mutHari=+v||14;render();return}
+  if(a==='mutCatat'){const p=String(v).split('|'),fs=(p[2]||'').split(',').filter(Boolean).map(decodeURIComponent),N=NM();
+    CT.seg='pakan';CT.sk='pakai';CT.kTgl=p[0];CT.pk={hari:Math.max(1,+p[1]||1),v:{},paksa:false,ket:''};pkFill();
+    [N.sil,N.odot,N.kons].forEach(n=>{if(fs.indexOf(n)<0)CT.pk.v[n]=''});
+    S.ui.tab='catat';save();render();window.scrollTo({top:0});return}
   if(a==='goStok'){CT.seg='pakan';CT.sk=v;S.ui.tab='catat';save();render();window.scrollTo({top:0});return}
   if(a==='silToStok'){const oi=S.sil.opsi<0?-1:S.sil.opsi;CT.sb={opsi:oi,ampas:S.sil.ampas,v:{},paksa:false,ket:''};sbRecalc();CT.seg='pakan';CT.sk='silase';CT.kTgl=S.sil.tgl||todayISO();S.ui.tab='catat';save();render();window.scrollTo({top:0});return}
   if(a==='sbAll'){const X=stokCalc();CT.sb.ampas=X&&X.by[NM().ampas]?Math.max(0,r1(X.by[NM().ampas].stok)):'';sbRecalc();render();return}
