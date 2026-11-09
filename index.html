@@ -2573,7 +2573,8 @@ function svgBars(items,o={}){
 /* ============ PAKAN AKTUAL KUMULATIF (Beranda/Tugas) ============
    Periode: hari pertama pemakaian tercatat s.d. kemarin (atau hari ini bila hari ini sudah dicatat).
    SEMUA hari dalam periode ikut dihitung, termasuk hari yang belum/tidak ada catatan (mis. masa adaptasi tanpa silase).
-   Per jenis: kg terpakai / ekor-hari seluruh periode. Ekor-hari = jumlah hari tiap domba di kandang (masuk sebelum hari itu, belum keluar).
+   Per jenis: kg terpakai / ekor-hari seluruh periode. Ekor pada hari d = domba yang sudah masuk pada/sebelum d dan belum keluar sebelum d
+   (hari masuk & hari keluar ikut dihitung, karena domba sudah/masih diberi pakan hari itu).
    Odot: berat segar = baris "diberikan (layu)" + baris "Susut pelayuan" sesuai catatan (bukan hitung ulang dari % layu).
    Koreksi stok & bahan silase tidak dihitung. Biaya = nilai keluar tiap baris (termasuk susut). */
 function pakanKumulatif(){
@@ -2598,12 +2599,10 @@ function pakanKumulatif(){
     if(/susut pelayuan/i.test(t.ket||''))o.susut+=t.kg;else o.kg+=t.kg;
     o.rp+=nilai(t);
   });
-  const pStart=isoD(addD(pd(first),-1));
-  let eh=0;
-  S.domba.forEach(s=>{if(!s.masuk)return;const a=s.masuk>pStart?s.masuk:pStart;let e=akhir;
-    if((s.status==='Terjual'||s.status==='Mati')&&s.keluar&&s.keluar<e)e=s.keluar;eh+=Math.max(0,days(pd(a),pd(e)))});
-  const hari=days(pd(pStart),pd(akhir));
-  let kosong=0;for(let i=0;i<hari;i++){if(!covU[isoD(addD(pd(akhir),-i))])kosong++}
+  const pStart=isoD(addD(pd(first),-1)),hari=days(pd(pStart),pd(akhir));
+  const ekorPada=d=>S.domba.reduce((n,s)=>n+(s.masuk&&s.masuk<=d&&!((s.status==='Terjual'||s.status==='Mati')&&s.keluar&&s.keluar<d)?1:0),0);
+  let eh=0,kosong=0;
+  for(let i=0;i<hari;i++){const d=isoD(addD(pd(akhir),-i));eh+=ekorPada(d);if(!covU[d])kosong++}
   const rows=Object.keys(per).filter(n=>per[n].kg+per[n].susut>0).map(n=>{const o=per[n],tot=o.kg+o.susut;
     return {nama:n,sat:satuan(by[n]),tot,beri:o.kg,susut:o.susut,rp:o.rp,avg:eh?tot/eh:null,avgBeri:eh?o.kg/eh:null}}).sort((a,b)=>b.tot-a.tot);
   const biaya=Object.keys(per).reduce((a,n)=>a+per[n].rp,0);
