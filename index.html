@@ -2570,6 +2570,61 @@ function svgBars(items,o={}){
 }
 
 /* ---------- BERANDA ---------- */
+/* ============ PAKAN AKTUAL KUMULATIF (Beranda/Tugas) ============
+   Periode: hari pertama s.d. hari terakhir pemakaian tercatat (bukan hari ini). Aturan sama dengan Analisis & Mutasi:
+   rekap "N hari" mencakup N hari yang berakhir di tanggalnya; koreksi & bahan silase tidak dihitung; odot "diberikan (layu)"
+   dikonversi ke berat segar (biaya susut pelayuan tetap dihitung).
+   Rata-rata per jenis = kg terpakai / ekor-hari pada HARI YANG TERCATAT untuk jenis itu, supaya hari yang lupa dicatat
+   tidak menurunkan rata-rata. Ekor pada hari d = domba dengan tgl masuk < d dan belum keluar (terjual/mati) sebelum d. */
+function pakanKumulatif(){
+  const tx=(S.stok&&S.stok.tx)||[];if(!tx.length||!S.domba.length)return null;
+  const N=NM(),W=odW(),today=todayISO();
+  const by=(S.stok.master||[]).reduce((o,m)=>(o[m.nama]=m,o),{});
+  const nilai=t=>t.nk!=null?t.nk:t.kg*((by[t.jenis]&&by[t.jenis].harga)||0);
+  const per={},covU={},susut=[];let first=null,last=null;
+  const F=n=>per[n]||(per[n]={kg:0,rp:0,cov:{}});
+  tx.forEach(t=>{
+    if(t.trx!=='Keluar'||!t.tgl||t.tgl>today)return;
+    const ket=t.ket||'';
+    if(/^koreksi/i.test(ket)||/bahan silase/i.test(ket))return;
+    if(/susut pelayuan/i.test(ket)){susut.push(t);return}
+    const mH=ket.match(/(\d+)\s*hari/i),span=mH?Math.max(1,+mH[1]):/mingguan/i.test(ket)?7:1,end=pd(t.tgl),o=F(t.jenis);
+    for(let i=0;i<span;i++){const k=isoD(addD(end,-i));o.cov[k]=1;covU[k]=1;if(!first||k<first)first=k}
+    if(!last||t.tgl>last)last=t.tgl;
+    o.kg+=t.jenis===N.odot&&/diberikan \(layu\)/i.test(ket)?t.kg/W:t.kg;
+    o.rp+=nilai(t);
+  });
+  if(!first)return null;
+  susut.forEach(t=>{if(t.tgl>=first&&t.tgl<=last)F(t.jenis).rp+=nilai(t)});
+  const memo={};
+  const ekorPada=iso=>{if(memo[iso]!=null)return memo[iso];let n=0;
+    S.domba.forEach(s=>{if(!s.masuk||s.masuk>=iso)return;if((s.status==='Terjual'||s.status==='Mati')&&s.keluar&&s.keluar<iso)return;n++});
+    return memo[iso]=n};
+  const ehDari=cov=>Object.keys(cov).reduce((a,d)=>a+ekorPada(d),0);
+  const hari=days(addD(pd(first),-1),pd(last)),hariU=Object.keys(covU).length,ehU=ehDari(covU);
+  const rows=Object.keys(per).filter(n=>per[n].kg>0).map(n=>{const o=per[n],eh=ehDari(o.cov);
+    return {nama:n,sat:satuan(by[n]),kg:o.kg,rp:o.rp,hari:Object.keys(o.cov).length,eh,avg:eh?o.kg/eh:null,rpEH:eh?o.rp/eh:null,odot:n===N.odot}})
+    .sort((a,b)=>b.kg-a.kg);
+  const biaya=Object.keys(per).reduce((a,n)=>a+per[n].rp,0);
+  return {first,last,hari,hariU,ehU,ekor:hariU?ehU/hariU:0,rows,biaya,rpEH:rows.reduce((a,r)=>a+(r.rpEH||0),0),lag:Math.max(0,days(pd(last),pd(today))-1)};
+}
+function rPakanKum(){
+  const P=pakanKumulatif(),judul='<h3 style="margin:0">Pakan aktual per ekor per hari</h3>';
+  if(!P)return `<section class="blk"><div class="panel">${judul}<p class="small muted" style="margin:4px 0 0">Muncul setelah ada pemakaian pakan yang dicatat.</p></div></section>`;
+  if(!P.ehU)return `<section class="blk"><div class="panel">${judul}<p class="small muted" style="margin:4px 0 0">Belum ada domba dengan tanggal masuk sebelum hari pemakaian tercatat.</p></div></section>`;
+  const dp=x=>x==null?'—':x>=1?nf(x,2):nf(x,3),kosong=P.hari-P.hariU;
+  return `<section class="blk"><div class="panel">
+    <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">${judul}<button class="linkbtn" data-act="${isAdmin()?'pkMutasi':'tab'}" data-v="stok">${isAdmin()?'lihat mutasi':'stok pakan'}</button></div>
+    <p class="small muted" style="margin:4px 0 10px">${fd(pd(P.first))} – ${fd(pd(P.last))} · ${nf(P.hari,0)} hari · rata-rata ${nf(P.ekor,1)} ekor</p>
+    <div class="tw"><table class="t"><thead><tr><th>Jenis pakan</th><th>Terpakai</th><th>Per ekor/hari</th></tr></thead><tbody>
+      ${P.rows.map(r=>`<tr><td class="l" style="white-space:normal">${esc(r.nama)}${r.odot?' <span class="small muted">(segar)</span>':''}<div class="small muted">tercatat ${r.hari} dari ${P.hari} hari</div></td><td>${nf(r.kg,0)} ${r.sat}</td><td><b>${dp(r.avg)} ${r.sat}</b></td></tr>`).join('')}
+      <tr><td class="l"><b>Biaya pakan</b></td><td><b>${rp(P.biaya)}</b></td><td><b>${rp(P.rpEH)}</b></td></tr>
+    </tbody></table></div>
+    ${kosong>0?`<p class="note" style="color:var(--warn)">${kosong} hari dalam periode ini belum ada catatan pemakaian sama sekali. Rata-rata tiap jenis hanya dihitung dari hari yang tercatat.</p>`:''}
+    ${P.lag>0?`<p class="note" style="color:var(--warn)">Pemakaian ${P.lag} hari terakhir belum dicatat, jadi periode berhenti di ${fd(pd(P.last))}.</p>`:''}
+    <p class="note">Dari semua pemakaian yang dicatat sejak hari pertama. Per ekor per hari = kg terpakai ÷ (jumlah domba di kandang × hari yang tercatat untuk jenis itu). Odot dihitung berat segar. Biaya per ekor per hari = jumlah biaya rata-rata tiap jenis.</p>
+  </div></section>`;
+}
 function rBeranda(){
   const R=calc(S.opsi[S.aktif]),F=feedAll(R),act=F.filter(x=>x.aktif),J=S.jadwal,W=odW();
   const T={sil:act.reduce((a,x)=>a+x.sil,0),od:act.reduce((a,x)=>a+x.od,0)*W,cost:act.reduce((a,x)=>a+x.cost,0)};
@@ -2619,6 +2674,7 @@ function rBeranda(){
       ${an?`<div class="panel"><div class="row" style="justify-content:space-between"><h3 style="margin:0">Tren ADG</h3><button class="linkbtn" data-act="tab" data-v="grafik">grafik lain</button></div>${spark}</div>`:''}
     </div>
   </section>
+  ${rPakanKum()}
   <section class="blk">
     <div class="row" style="justify-content:space-between;margin-bottom:8px"><h3 style="margin:0">Perlu perhatian</h3><button class="linkbtn" data-act="tab" data-v="mitigasi">semua peringatan</button></div>
     <div class="alerts">${A.slice(0,4).map(a=>`<div class="al ${a.lvl}"><div class="hd">${chip(LV[a.lvl][1],LV[a.lvl][2])}<span>${esc(a.judul)}</span></div><p class="small">${a.isi}</p></div>`).join('')||'<div class="al"><p>Tidak ada peringatan penting hari ini.</p></div>'}</div>
@@ -2885,6 +2941,7 @@ ROOT().addEventListener('click',e=>{
   if(a==='anBatch'){AN.batch=v;render();return}
   if(a==='anKondisi'){O.goInput('kondisi',v);return}
   if(a==='sk'){CT.sk=v;render();return}
+  if(a==='pkMutasi'){CT.stokSub='mutasi';S.ui.tab='stok';save();render();window.scrollTo({top:0});return}
   if(a==='stokSub'){CT.stokSub=v==='mutasi'?'mutasi':'stok';render();return}
   if(a==='mutHari'){CT.mutHari=+v||14;render();return}
   if(a==='mutCatat'){const p=String(v).split('|'),fs=(p[2]||'').split(',').filter(Boolean).map(decodeURIComponent),N=NM();
