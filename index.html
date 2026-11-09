@@ -4006,6 +4006,14 @@ function renderInv() {
   var seg = [['Bakalan (Rp ' + nf0.format(A.hargaBakalan) + '/kg × bobot awal)', RC.bakalan, SC.bakalan], ['Pakan yang terpakai', RC.pakan, SC.pakan], ['Vaksin & obat', RC.obat, SC.obat]];
   if (RC.ops) seg.push(['Biaya operasional', RC.ops, SC.ops]);
   if (RC.susut) seg.push(['Penyusutan', RC.susut, SC.susut]);
+  if (!sendiri && P.setoran != null) {
+    h += '<h3 class="sec">Sisa saldo modal</h3>';
+    if (P.setoran > 0) h += '<div class="card"><div class="kpi big" style="grid-column:auto;margin-bottom:10px"><div class="v' + (P.saldo < 0 ? ' neg' : '') + '">' + rp(P.saldo) + '</div><div class="l">Sisa saldo = total setoran modal − dana yang sudah terpakai</div></div>' +
+      '<div class="row"><span>Total setoran modal' + (P.nSetoran ? ' <span class="muted small">(' + P.nSetoran + '× setor, terakhir ' + esc(P.setoranTerakhir) + ')</span>' : '') + '</span><b>' + rp(P.setoran) + '</b></div>' +
+      '<div class="row"><span>Dana terpakai sampai kini</span><b>− ' + rp(mt) + '</b></div>' +
+      '<div class="row"><b>Sisa saldo</b><b class="' + lbCls(P.saldo) + '">' + rp(P.saldo) + '</b></div></div>';
+    else h += '<div class="asm" style="margin:0 0 8px">Belum ada setoran modal tercatat atas nama ' + esc(r.investor) + ' di catatan keuangan.</div>';
+  }
   h += '<h3 class="sec">1. Dana terpakai dari uang masuk</h3><div class="card"><div class="kpi big" style="grid-column:auto;margin-bottom:10px"><div class="v">' + rp(mt) + '</div><div class="l">Dana yang sudah terpakai sampai kini</div></div>' +
     '<div class="row"><span>Perkiraan total modal sampai panen</span><b>' + rp(mk) + '</b></div>' +
     '<div class="prog" role="img" aria-label="Dana terpakai"><div style="width:' + pk.toFixed(1) + '%"></div></div><div class="muted small" style="margin:4px 0 10px">' + nf0.format(pk) + '% dari perkiraan total modal sudah terpakai</div>' +
@@ -4060,7 +4068,10 @@ function renderInv() {
     '<div class="asm">Modal sampai kini ' + rp(B.modalSekarang) + ' (bakalan Rp ' + nf0.format(A.hargaBakalan) + '/kg × bobot awal; pakan sesuai yang terpakai; obat Rp ' + nf0.format(A.obat) + '/ekor). Dihitung <b>komunal</b>: untung/rugi seluruh ekor digabung, bukan per ekor. Domba mati tetap masuk modal tanpa hasil jual.</div>' +
     '<div class="asm"><b>Ketentuan kerugian:</b><br>1. Kerugian karena <b>kelalaian pengelola</b> diganti oleh pengelola <b>100%</b>.<br>2. Kerugian karena <b>force majeure</b> (keadaan kahar di luar kendali, mis. bencana alam atau wabah penyakit) ditanggung bersama <b>50% pengelola : 50% pemodal</b>.</div>';
 
-  h += '<div class="asm"><b>Asumsi:</b> bakalan Rp ' + nf0.format(A.hargaBakalan) + '/kg × bobot awal; harga jual Rp ' + nf0.format(A.hargaJual) + '/kg hidup; target bobot ' + nf1.format(A.target) + ' kg atau sampai ' + esc(A.akhir) +
+  if (A.adg != null) h += '<div class="asm"><b>Asumsi:</b> bakalan Rp ' + nf0.format(A.hargaBakalan) + '/kg × bobot awal; harga jual Rp ' + nf0.format(A.hargaJual) + '/kg hidup. ' +
+       'Prediksi bobot = timbangan terakhir (atau bobot awal bila belum ditimbang ulang) + ' + nf0.format(A.adg * 1000) + ' g/hari sampai panen ' + esc(A.panen) + ', tanpa batas atas; acuan berganti otomatis setiap ada timbangan baru. ' +
+       'Modal sampai panen = biaya yang sudah terpakai + pakan Rp ' + nf0.format(A.pakanHari) + '/ekor/hari dari hari ini sampai panen. Bila ada pembeli lebih awal, domba dicatat terjual dengan hasil sebenarnya. Ini perkiraan, bukan jaminan hasil.</div>';
+  else h += '<div class="asm"><b>Asumsi:</b> bakalan Rp ' + nf0.format(A.hargaBakalan) + '/kg × bobot awal; harga jual Rp ' + nf0.format(A.hargaJual) + '/kg hidup; target bobot ' + nf1.format(A.target) + ' kg atau sampai ' + esc(A.akhir) +
        ' (mana lebih dulu); kenaikan bobot mengikuti rata-rata harian tiap domba (cadangan ' + nf3.format(A.adgCad) + ' kg/hari). Ini perkiraan, bukan jaminan hasil.</div>';
   el.innerHTML = h; bindInv();
 }
@@ -4121,7 +4132,9 @@ async function openInvDetail(tag) {
     } else h += '<h3>HPP</h3><p class="muted small">Data HPP belum tersedia.</p>';
     if (pj) {
       var nm = ['Harga −10%', 'Harga dasar', 'Harga +10%'];
-      h += '<h3>Proyeksi domba ini</h3><p class="muted small" style="margin:0 0 6px">Dijual sekitar ' + esc(pj.tglJual) + ' pada ±' + nf1.format(pj.bobotJual) + ' kg (kenaikan ' + nf3.format(pj.adg) + ' kg/hari). Tambahan biaya sampai jual ' + rp(pj.biayaTambah) + ' → HPP akhir ' + rp(pj.hppAkhir) + '.</p>' +
+      h += '<h3>Proyeksi domba ini</h3><p class="muted small" style="margin:0 0 6px">' + (pj.acuanKg != null
+          ? 'Panen ' + esc(pj.tglJual) + ': ' + (pj.acuanJenis === 'awal' ? 'bobot awal ' : 'timbangan terakhir ') + nf1.format(pj.acuanKg) + ' kg (' + esc(pj.acuanTgl) + ') + ' + nf0.format(pj.adg * 1000) + ' g/hari × ' + pj.hariTumbuh + ' hari ≈ <b>' + nf1.format(pj.bobotJual) + ' kg</b>. Pakan sampai panen ' + pj.hariTambah + ' hari × Rp ' + nf0.format(pj.biayaHari) + ' = ' + rp(pj.biayaTambah) + ' → HPP akhir ' + rp(pj.hppAkhir) + '.'
+          : 'Dijual sekitar ' + esc(pj.tglJual) + ' pada ±' + nf1.format(pj.bobotJual) + ' kg (kenaikan ' + nf3.format(pj.adg) + ' kg/hari). Tambahan biaya sampai jual ' + rp(pj.biayaTambah) + ' → HPP akhir ' + rp(pj.hppAkhir) + '.') + '</p>' +
         '<table class="tbl"><tr><th>Skenario</th><th class="n">Hasil jual</th><th class="n">Selisih HPP</th></tr>' +
         pj.skenario.map(function (s, i) { return '<tr><td>' + nm[i] + '</td><td class="n">' + rp(s.pendapatan) + '</td><td class="n ' + lbCls(s.laba) + '"><b>' + rp(s.laba) + '</b></td></tr>'; }).join('') + '</table>' +
         '<div class="asm">Bagi hasil dihitung per paket seluruh domba (lihat halaman Portofolio), bukan per ekor. Perkiraan, bukan jaminan hasil.</div>';
