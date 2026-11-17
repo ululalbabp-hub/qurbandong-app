@@ -2116,6 +2116,90 @@ function rStok(){
   return tg+(sub==='mutasi'&&M?rMutasi(M):rStokUtama());
 }
 
+/* ============ MUTASI KONDISI & PINDAH KANDANG (v60) ============ */
+Object.assign(CT,{petaSub:'denah',mkHari:14,mkJenis:''});
+const MK_ST=['Sakit','Sehat','Terjual','Mati'];
+function mkNorm(v){const t=String(v||'').trim().toLowerCase();return t==='sakit'?'Sakit':t==='sehat'?'Sehat':t==='terjual'?'Terjual':t==='mati'?'Mati':''}
+function mkCalc(){
+  const dom=S.domba||[],log=(S.kondisiLog||[]).map((e,i)=>({...e,i,st:mkNorm(e.status)})).sort((a,b)=>a.tgl.localeCompare(b.tgl)||a.i-b.i);
+  const by={};dom.forEach(s=>{by[s.tag]=s});
+  const pos={},keluarTgl={},ev=[];
+  dom.forEach(s=>{pos[s.tag]=s.kAwal||s.posisi||''});
+  /* jejak posisi per domba: [{tgl,k}] mulai dari kandang awal */
+  const trail={};dom.forEach(s=>{trail[s.tag]=[{tgl:s.masuk||'0000-00-00',k:s.kAwal||s.posisi||''}]});
+  log.forEach(e=>{
+    const s=by[e.tag];if(!s)return;
+    const dari=pos[e.tag],pindah=e.pindah&&e.pindah!==dari?e.pindah:'';
+    if(pindah){pos[e.tag]=pindah;trail[e.tag].push({tgl:e.tgl,k:pindah})}
+    let first=false;
+    if((e.st==='Terjual'||e.st==='Mati')&&!keluarTgl[e.tag]){keluarTgl[e.tag]=e.tgl;first=true}
+    ev.push({tgl:e.tgl,tag:e.tag,st:e.st,dari:pindah?dari:'',ke:pindah,ket:e.ket,harga:e.harga,jenis:s.jenis,i:e.i,first,dobel:(e.st==='Terjual'||e.st==='Mati')&&!first});
+  });
+  dom.forEach(s=>{if(!keluarTgl[s.tag]&&(s.status==='Terjual'||s.status==='Mati')&&s.keluar){const k=toISO(s.keluar);if(k)keluarTgl[s.tag]=k}});
+  /* kandang pada akhir hari d (iso); '' bila belum masuk atau sudah keluar */
+  const di=(tag,d)=>{const s=by[tag];if(!s||!s.masuk||s.masuk>d)return '';const kt=keluarTgl[tag];if(kt&&kt<=d)return '';let k='';trail[tag].forEach(t=>{if(t.tgl<=d)k=t.k});return k};
+  return {dom,ev,by,keluarTgl,di,pos};
+}
+function mkView(){
+  const M=mkCalc(),H=CT.mkHari,today=todayISO(),start=H>0?isoD(addD(pd(today),-(H-1))):'0000-00-00';
+  const before=H>0?isoD(addD(pd(start),-1)):'0000-00-00';
+  const inP=M.ev.filter(e=>e.tgl>=start&&e.tgl<=today);
+  const cnt={pindah:inP.filter(e=>e.ke).length,sakit:inP.filter(e=>e.st==='Sakit').length,sehat:inP.filter(e=>e.st==='Sehat').length,terjual:inP.filter(e=>e.st==='Terjual'&&e.first).length,mati:inP.filter(e=>e.st==='Mati'&&e.first).length};
+  cnt.rpJual=inP.filter(e=>e.st==='Terjual'&&e.first).reduce((a,e)=>a+(e.harga||0),0);
+  const sakitNow=M.dom.filter(s=>s.status==='Sakit').length;
+  /* mutasi per kandang */
+  const names=new Set(kandangList());M.dom.forEach(s=>{if(s.kAwal)names.add(s.kAwal);if(s.posisi)names.add(s.posisi)});M.ev.forEach(e=>{if(e.ke)names.add(e.ke)});
+  const rows={};[...names].filter(Boolean).forEach(k=>{rows[k]={k,awal:0,baru:0,masuk:0,keluar:0,jual:0,mati:0,akhir:0}});
+  const R=k=>rows[k]||(rows[k]={k,awal:0,baru:0,masuk:0,keluar:0,jual:0,mati:0,akhir:0});
+  M.dom.forEach(s=>{
+    const a=M.di(s.tag,before);if(a)R(a).awal++;
+    const z=M.di(s.tag,today);if(z)R(z).akhir++;
+    if(s.masuk&&s.masuk>=start&&s.masuk<=today&&s.kAwal)R(s.kAwal).baru++;
+  });
+  inP.forEach(e=>{
+    if(e.ke){if(e.dari)R(e.dari).keluar++;R(e.ke).masuk++}
+    if((e.st==='Terjual'||e.st==='Mati')&&e.first){const kk=M.di(e.tag,isoD(addD(pd(e.tgl),-1)))||e.ke||(M.by[e.tag]&&M.by[e.tag].kAwal)||'';if(kk){if(e.st==='Terjual')R(kk).jual++;else R(kk).mati++}}
+  });
+  /* selisih dengan posisi di sheet (cek data) */
+  const beda=M.dom.filter(s=>isAktif(s)&&s.posisi&&M.di(s.tag,today)&&M.di(s.tag,today)!==s.posisi).map(s=>({tag:s.tag,hitung:M.di(s.tag,today),sheet:s.posisi}));
+  const kl=Object.values(rows).filter(r=>r.awal||r.baru||r.masuk||r.keluar||r.jual||r.mati||r.akhir).sort((a,b)=>a.k.localeCompare(b.k,'id',{numeric:true}));
+  const list=inP.filter(e=>!CT.mkJenis||(CT.mkJenis==='Pindah'?!!e.ke:e.st===CT.mkJenis)).sort((a,b)=>b.tgl.localeCompare(a.tgl)||b.i-a.i);
+  return {M,H,start,today,cnt,sakitNow,kl,beda,list,total:inP.length};
+}
+function rMutKandang(){
+  const V=mkView(),adm=isAdmin();
+  const chipsH=[[7,'7 hari'],[14,'14 hari'],[30,'30 hari'],[0,'Semua']].map(([h,l])=>`<button data-act="mkHari" data-v="${h}" aria-pressed="${V.H===h}">${l}</button>`).join('');
+  const chipsJ=[['','Semua'],['Pindah','Pindah'],['Sakit','Sakit'],['Sehat','Pulih'],['Terjual','Terjual'],['Mati','Mati']].map(([k,l])=>`<button data-act="mkJenis" data-v="${k}" aria-pressed="${CT.mkJenis===k}">${l}</button>`).join('');
+  const badge=e=>[e.st?chip(e.st==='Sakit'||e.st==='Mati'?'bad':e.st==='Terjual'?'ok':'info',e.st==='Sehat'?'Pulih':e.st):'',e.ke?chip('warn','Pindah'):'',e.dobel?chip('warn','Dobel, tidak dihitung'):''].join(' ');
+  const byDate={};V.list.forEach(e=>{(byDate[e.tgl]=byDate[e.tgl]||[]).push(e)});
+  const ledger=Object.keys(byDate).sort().reverse().map(d=>{const dt=pd(d);return `<div class="small muted" style="margin:12px 2px 4px">${HRN[dt.getDay()]}, ${fdS(dt)}</div><div class="elist">${byDate[d].map(e=>`<button class="er rowbtn" data-act="domba" data-v="${esc(e.tag)}"><div><span class="tg">${esc(e.tag)}</span> <span class="sub">${esc(e.jenis)}</span> ${badge(e)}<div class="sub">${[e.ke?esc(e.dari||'?')+' → '+esc(e.ke):'',e.ket?esc(e.ket):''].filter(Boolean).join(' · ')||'—'}</div></div><div class="amt">${adm&&e.st==='Terjual'&&e.harga?rp(e.harga):'›'}</div></button>`).join('')}</div>`}).join('')||'<div class="panel"><p class="muted">Tidak ada catatan pada periode dan filter ini.</p></div>';
+  const th='<tr><th>Kandang</th><th>Awal</th><th>Masuk</th><th>Keluar</th><th>Jual/Mati</th><th>Akhir</th></tr>';
+  const tb=V.kl.map(r=>{const net=r.baru+r.masuk-r.keluar-r.jual-r.mati;const ok=r.awal+net===r.akhir;return `<tr${ok?'':' class="gapr"'}><td class="l"><b>${esc(r.k)}</b></td><td>${r.awal}</td><td>${r.baru+r.masuk?'+'+(r.baru+r.masuk):'·'}</td><td>${r.keluar?'−'+r.keluar:'·'}</td><td>${r.jual+r.mati?'−'+(r.jual+r.mati):'·'}</td><td><b>${r.akhir}</b></td></tr>`}).join('');
+  const tot=V.kl.reduce((a,r)=>({awal:a.awal+r.awal,akhir:a.akhir+r.akhir}),{awal:0,akhir:0});
+  const per=V.H>0?`${fdS(pd(V.start))} – ${fdS(pd(V.today))}`:'sejak awal';
+  return `<section class="blk">
+    <h2>Mutasi kondisi &amp; pindah kandang</h2>
+    <p class="lead">Riwayat semua catatan Kondisi (sakit, pulih, terjual, mati) dan perpindahan kandang dari QDF › Input_Kondisi. Kandang asal dihitung dari posisi sebelumnya. Angka di tabel kandang = jumlah ekor di kandang itu.</p>
+    <div class="kchips" style="margin:0 0 14px">${chipsH}</div>
+    <div class="kpis">
+      <div class="kpi"><div class="lbl">Pindah kandang</div><div class="v">${V.cnt.pindah}</div><div class="s">${per}</div></div>
+      <div class="kpi"><div class="lbl">Sakit sekarang</div><div class="v" style="color:var(--${V.sakitNow?'bad':'ok'})">${V.sakitNow}</div><div class="s">${V.cnt.sakit} kasus baru · ${V.cnt.sehat} pulih</div></div>
+      <div class="kpi"><div class="lbl">Terjual / mati</div><div class="v">${V.cnt.terjual} / ${V.cnt.mati}</div><div class="s">${adm&&V.cnt.rpJual?rp(V.cnt.rpJual):per}</div></div>
+    </div>
+    <div class="row" style="margin-top:12px"><button class="btn orange" data-act="goCatat" data-v="kondisi">Catat kondisi / pindah</button></div>
+  </section>
+  <section class="blk"><h3>Mutasi per kandang</h3>
+    <p class="note">Masuk = domba baru + pindahan dari kandang lain. Keluar = pindah ke kandang lain. Baris merah = hitungan awal + mutasi tidak sama dengan jumlah akhir, kemungkinan ada catatan yang kurang.</p>
+    <div class="tw"><table class="t"><thead>${th}</thead><tbody>${tb||'<tr><td class="l muted" colspan="6">Belum ada data.</td></tr>'}<tr><td class="l"><b>Total</b></td><td><b>${tot.awal}</b></td><td colspan="3"></td><td><b>${tot.akhir}</b></td></tr></tbody></table></div>
+    ${V.beda.length?`<div class="banner warn" style="margin-top:10px"><span>${V.beda.length} domba posisinya di sheet berbeda dari hitungan riwayat: ${V.beda.slice(0,6).map(x=>esc(x.tag)+' (sheet '+esc(x.sheet)+', riwayat '+esc(x.hitung)+')').join('; ')}${V.beda.length>6?' …':''}. Cek Input_Kondisi.</span></div>`:''}
+  </section>
+  <section class="blk"><h3>Riwayat</h3>
+    <div class="kchips" style="margin:0 0 4px">${chipsJ}</div>
+    <div class="small muted" style="margin:6px 2px">${V.list.length}${V.list.length!==V.total?' dari '+V.total:''} catatan</div>
+    ${ledger}
+  </section>`;
+}
+
 /* ---- Formulir stok (di menu Catat) ---- */
 Object.assign(CT,{seg:'timbang',sk:'silase',busyS:false,busyM:false,stokSub:'stok',mutHari:14,
   sb:{opsi:-1,ampas:'',v:{},paksa:false,ket:''},
@@ -2853,9 +2937,11 @@ function rCell(c,mode,D){
     ${c.sakit?'<span class="kc-flag" title="ada yang sakit">!</span>':c.jual?'<span class="kc-flag jual" title="siap jual">$</span>':''}</button>`;
 }
 function rPeta(){
+  const tgP=`<div class="kchips" style="margin:0 0 14px"><button data-act="petaSub" data-v="denah" aria-pressed="${CT.petaSub!=='mutasi'}">Denah</button><button data-act="petaSub" data-v="mutasi" aria-pressed="${CT.petaSub==='mutasi'}">Mutasi kondisi &amp; kandang</button></div>`;
+  if(CT.petaSub==='mutasi')return syncBanner()+tgP+rMutKandang();
   const D=petaData(),mode=UI.petaMode;
   const tot=Object.values(D.groups).flat();
-  return `${syncBanner()}
+  return `${syncBanner()}${tgP}
   <section class="blk">
     <h2>Peta kandang</h2>
     <p class="lead">Satu baris = satu palung yang melayani dua kandang berhadapan. Ketuk kandang untuk melihat isinya, porsi pakan, dan memindahkan domba.</p>
@@ -3088,6 +3174,9 @@ ROOT().addEventListener('click',e=>{
   if(a==='pkMutasi'){CT.stokSub='mutasi';S.ui.tab='stok';save();render();window.scrollTo({top:0});return}
   if(a==='stokSub'){CT.stokSub=v==='mutasi'?'mutasi':'stok';render();return}
   if(a==='mutHari'){CT.mutHari=+v||14;render();return}
+  if(a==='petaSub'){CT.petaSub=v==='mutasi'?'mutasi':'denah';render();window.scrollTo({top:0});return}
+  if(a==='mkHari'){CT.mkHari=(+v>=0&&v!=='')?+v:14;render();return}
+  if(a==='mkJenis'){CT.mkJenis=v||'';render();return}
   if(a==='mutCatat'){const p=String(v).split('|'),fs=(p[2]||'').split(',').filter(Boolean).map(decodeURIComponent),N=NM();
     CT.seg='pakan';CT.sk='pakai';CT.kTgl=p[0];CT.pk={hari:Math.max(1,+p[1]||1),v:{},paksa:false,ket:''};pkFill();
     [N.sil,N.odot,N.kons].forEach(n=>{if(fs.indexOf(n)<0)CT.pk.v[n]=''});
