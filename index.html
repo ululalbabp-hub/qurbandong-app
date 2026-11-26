@@ -1463,6 +1463,7 @@ function rPakan(){
   else adv={c:'bad',t:'Nafsu makan turun tajam',d:'Sisa di atas 25% bisa tanda domba sakit (demam, kembung, cacingan) atau pakan rusak. Periksa domba satu per satu sebelum mengurangi porsi, lalu lihat tab Mitigasi.',n:given*.85};
   /* kalkulator cepat */
   const cw=+S.cepat.bobot||0,cst=stageOf(cw),cmo=R.months[cst-1],cf=cw/cmo.bb;
+  let P7=null;try{P7=pakanKumulatif(7)}catch(e){}
   return `
   ${syncBanner()}
   <section class="blk">
@@ -1473,8 +1474,9 @@ function rPakan(){
       <div class="kpi"><div class="lbl">Ekor aktif</div><div class="v">${n}</div><div class="s">${act.filter(x=>x.s.status==='Sakit').length} sakit · ${un.length} belum terpetakan</div></div>
       <div class="kpi"><div class="lbl">Silase / hari</div><div class="v">${nf(T.sil,1)} kg</div><div class="s">kapur ${nf(T.kap,1)} g sudah di dalam silase</div></div>
       <div class="kpi"><div class="lbl">Odot / hari</div><div class="v">${nf(T.od*W,1)} kg</div><div class="s">${W<1?`setelah dilayukan · panen ${nf(T.od,1)} kg segar`:'segar, dicacah 3–5 cm'}</div></div>
-      <div class="kpi"><div class="lbl">Biaya pakan / hari</div><div class="v">${rp(T.cost)}</div><div class="s">${rp(avgCost)}/ekor · anggaran ${rp(S.g.anggaran)} ${avgCost>S.g.anggaran?chip('bad','lebih'):chip('ok','aman')}</div></div>
+      <div class="kpi"><div class="lbl">Biaya pakan / hari (rencana)</div><div class="v">${rp(T.cost)}</div><div class="s">${rp(avgCost)}/ekor · anggaran ${rp(S.g.anggaran)} ${avgCost>S.g.anggaran?chip('bad','lebih'):chip('ok','aman')}${P7&&P7.rpEH!=null?`<br>aktual 7 hari terakhir ${rp(P7.rpEH)}/ekor`:''}</div></div>
     </div>
+    <p class="note">Rencana = ransum aktif × bobot domba hari ini, dengan harga bahan dari Kalkulator Pakan. Realisasi dari catatan pemakaian ada di kartu "Pakan aktual per ekor per hari" (Tugas).</p>
   </section>
   <section class="blk">
     <h3>Jadwal hari ini (seluruh kandang)</h3>
@@ -2842,7 +2844,8 @@ function svgBars(items,o={}){
    (hari masuk & hari keluar ikut dihitung, karena domba sudah/masih diberi pakan hari itu).
    Odot: berat segar = baris "diberikan (layu)" + baris "Susut pelayuan" sesuai catatan (bukan hitung ulang dari % layu).
    Koreksi stok & bahan silase tidak dihitung. Biaya = nilai keluar tiap baris (termasuk susut). */
-function pakanKumulatif(){
+/* v64: nHari = hanya N hari terakhir dari periode (mis. 7) */
+function pakanKumulatif(nHari){
   const tx=(S.stok&&S.stok.tx)||[];if(!tx.length||!S.domba.length)return null;
   const today=todayISO(),kemarin=isoD(addD(pd(today),-1));
   const by=(S.stok.master||[]).reduce((o,m)=>(o[m.nama]=m,o),{});
@@ -2858,8 +2861,9 @@ function pakanKumulatif(){
   });
   if(!first)return null;
   const akhir=last===today?today:kemarin<first?last:kemarin;
+  if(nHari>0){const s0=isoD(addD(pd(akhir),-(nHari-1)));if(s0>first)first=s0}
   baris.forEach(t=>{
-    if(t.tgl>akhir)return;
+    if(t.tgl>akhir||t.tgl<first)return;
     const o=F(t.jenis);
     if(/susut pelayuan/i.test(t.ket||''))o.susut+=t.kg;else o.kg+=t.kg;
     o.rp+=nilai(t);
@@ -2878,16 +2882,18 @@ function rPakanKum(){
   if(!P)return `<section class="blk"><div class="panel">${judul}<p class="small muted" style="margin:4px 0 0">Muncul setelah ada pemakaian pakan yang dicatat.</p></div></section>`;
   if(!P.eh)return `<section class="blk"><div class="panel">${judul}<p class="small muted" style="margin:4px 0 0">Belum ada domba dengan tanggal masuk sebelum hari pemakaian tercatat.</p></div></section>`;
   const dp=x=>x==null?'—':x>=1?nf(x,2):nf(x,3);
+  const P7=P.hari>7?pakanKumulatif(7):null,r7=n=>{const r=P7&&P7.rows.find(x=>x.nama===n);return r?r.avg:null};
+  const c7=P7?'<th>7 hari terakhir</th>':'',d7=v=>P7?`<td>${v}</td>`:'';
   return `<section class="blk"><div class="panel">
     <div class="row" style="justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap">${judul}<button class="linkbtn" data-act="${isAdmin()?'pkMutasi':'tab'}" data-v="stok">${isAdmin()?'lihat mutasi':'stok pakan'}</button></div>
     <p class="small muted" style="margin:4px 0 10px">${fd(pd(P.first))} – ${fd(pd(P.akhir))} · ${nf(P.hari,0)} hari · rata-rata ${nf(P.ekor,1)} ekor (${nf(P.eh,0)} ekor-hari)</p>
-    <div class="tw"><table class="t"><thead><tr><th>Jenis pakan</th><th>Terpakai</th><th>Per ekor/hari</th></tr></thead><tbody>
+    <div class="tw"><table class="t"><thead><tr><th>Jenis pakan</th><th>Terpakai</th><th>Per ekor/hari</th>${c7}</tr></thead><tbody>
       ${P.rows.map(r=>r.susut>0
-        ?`<tr><td class="l" style="white-space:normal">${esc(r.nama)} <span class="small muted">(segar)</span><div class="small muted">diberikan ${nf(r.beri,0)} + susut layu ${nf(r.susut,0)} ${r.sat} (${pc(r.susut/r.tot,0)})</div></td><td>${nf(r.tot,0)} ${r.sat}</td><td><b>${dp(r.avg)} ${r.sat}</b><div class="small muted">dimakan ${dp(r.avgBeri)}</div></td></tr>`
-        :`<tr><td class="l">${esc(r.nama)}</td><td>${nf(r.tot,0)} ${r.sat}</td><td><b>${dp(r.avg)} ${r.sat}</b></td></tr>`).join('')}
-      <tr><td class="l"><b>Biaya pakan</b></td><td><b>${rp(P.biaya)}</b></td><td><b>${rp(P.rpEH)}</b></td></tr>
+        ?`<tr><td class="l" style="white-space:normal">${esc(r.nama)} <span class="small muted">(segar)</span><div class="small muted">diberikan ${nf(r.beri,0)} + susut layu ${nf(r.susut,0)} ${r.sat} (${pc(r.susut/r.tot,0)})</div></td><td>${nf(r.tot,0)} ${r.sat}</td><td><b>${dp(r.avg)} ${r.sat}</b><div class="small muted">dimakan ${dp(r.avgBeri)}</div></td>${d7(dp(r7(r.nama))+' '+r.sat)}</tr>`
+        :`<tr><td class="l">${esc(r.nama)}</td><td>${nf(r.tot,0)} ${r.sat}</td><td><b>${dp(r.avg)} ${r.sat}</b></td>${d7(dp(r7(r.nama))+' '+r.sat)}</tr>`).join('')}
+      <tr><td class="l"><b>Biaya pakan</b></td><td><b>${rp(P.biaya)}</b></td><td><b>${rp(P.rpEH)}</b></td>${d7('<b>'+(P7&&P7.rpEH!=null?rp(P7.rpEH):'—')+'</b>')}</tr>
     </tbody></table></div>
-    <p class="note">Semua hari dalam periode ikut dihitung, termasuk hari yang tidak ada catatan${P.kosong?` (${P.kosong} hari tanpa catatan pemakaian)`:''}.${P.hariIniBelum?' Hari ini belum ikut karena pemakaian biasanya dicatat sore atau besok.':''} Per ekor per hari = total terpakai ÷ ekor-hari (jumlah domba di kandang × hari). Odot segar = yang diberikan (layu) + susut pelayuan sesuai catatan; biaya susut ikut dihitung.</p>
+    <p class="note">Semua hari dalam periode ikut dihitung, termasuk hari yang tidak ada catatan${P.kosong?` (${P.kosong} hari tanpa catatan pemakaian)`:''}.${P.hariIniBelum?' Hari ini belum ikut karena pemakaian biasanya dicatat sore atau besok.':''} Per ekor per hari = total terpakai ÷ ekor-hari (jumlah domba di kandang × hari). ${P7?` Kolom 7 hari terakhir (${fd(pd(P7.first))} – ${fd(pd(P7.akhir))}) menggambarkan pemberian saat ini; rata-rata seluruh periode lebih rendah karena ikut menghitung masa adaptasi (silase belum/baru sedikit).`:''} Angka ini realisasi dari catatan pemakaian; kartu Biaya pakan / hari di tab Pemberian Pakan adalah rencana dari ransum Kalkulator. Odot segar = yang diberikan (layu) + susut pelayuan sesuai catatan; biaya susut ikut dihitung.</p>
   </div></section>`;
 }
 function rBeranda(){
