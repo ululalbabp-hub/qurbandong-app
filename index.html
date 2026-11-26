@@ -1073,7 +1073,7 @@ html{background:var(--gl-base)!important}
 body{background:transparent!important}
 body::before{content:"";position:fixed;inset:-10vmax;z-index:-1;pointer-events:none;transform:translateZ(0);
   background:radial-gradient(55vmax 40vmax at 88% 8%,var(--gl-2),transparent 65%),radial-gradient(55vmax 55vmax at 0% 45%,var(--gl-1),transparent 65%),radial-gradient(60vmax 45vmax at 65% 105%,var(--gl-3),transparent 65%),var(--gl-base)}
-.screen{contain:layout style}
+/* v62: contain:layout dihapus, karena membuat lembar (position:fixed) kandang/domba muncul di dasar halaman */
 .top>div:first-child{min-width:0;flex:1}.top>div:first-child>div{min-width:0}
 .top .ttl{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 @media (max-width:430px){.top .ttl{font-size:17px}.top .ic{width:40px;height:40px}}
@@ -1303,7 +1303,7 @@ const DEFAULT=()=>({
   aktif:1,
   jadwal:{silPagi:.5,odPagi:.5,batas:6,adapt:true,kosong:false,pakaiLayu:true,layu:.15},
   kawanan:50,
-  sil:{opsi:-1,ampas:1000,tgl:todayISO(),wadahKg:140,mode:'auto',manual:20,ph:''},
+  sil:{opsi:-1,ampas:1000,tgl:todayISO(),wadahKg:140,mode:'auto',manual:20,ph:'',garamKons:false},
   kual:{},
   sisa:{palung:'P-Betina1',pakan:'sil',kg:0.3},
   cepat:{bobot:28,jenis:'Jantan'},
@@ -1561,7 +1561,7 @@ function rPakan(){
 const WADAH=[['Drum plastik 200 L',140],['Drum plastik 120 L',80],['Tong plastik 60 L',40],['Karung plastik dobel + kantong',25]];
 function rSilase(){
   const si=S.sil,oi=si.opsi<0?S.aktif:si.opsi,o=S.opsi[oi],R=calc(o),c=R.c,A=S.b.ampas,M=S.b.mol,T=S.t;
-  const amp=+si.ampas||0,kn=amp*c.konsPerTon/1000,ml=amp*c.molPerTon/1000,kp=amp*c.kapurPerTon/1000,pb=amp*c.probPerTon/1000,tot=amp+kn+ml+kp;
+  const amp=+si.ampas||0,kn=amp*c.konsPerTon/1000,ml=amp*c.molPerTon/1000,kp=amp*c.kapurPerTon/1000,pb=amp*c.probPerTon/1000,gp=si.garamKons?.003:.005,gr=(amp+kn+ml)*gp,tot=amp+kn+ml+kp+gr;
   const molL=ml/1.4,air=Math.min(molL,amp*0.02);
   const cost=amp*A.h+kn*c.K.h+ml*M.h+kp*T.hKapur+pb*T.hProb;
   const F=feedAll(R),auto=F.filter(x=>x.aktif).reduce((a,x)=>a+x.sil,0);
@@ -1598,6 +1598,7 @@ function rSilase(){
       <div class="field"><label class="lbl" for="f-sil-tgl">Tanggal pembuatan</label><input type="date" class="num" style="width:100%" id="f-sil-tgl" data-k="sil.tgl" value="${esc(si.tgl)}"></div>
       <div class="field"><label class="lbl" for="f-wadah">Wadah</label><select id="f-wadah" data-act="wadah">${WADAH.map(x=>`<option value="${x[1]}" ${+si.wadahKg===x[1]?'selected':''}>${x[0]} (±${x[1]} kg)</option>`).join('')}<option value="" ${WADAH.some(x=>x[1]===+si.wadahKg)?'':'selected'}>Lainnya</option></select>
         <div class="row" style="margin-top:4px">${inp('sil.wadahKg',{label:'Isi per wadah kg',cls:'w4'})}<span class="small muted">kg per wadah (perkiraan; timbang 1 wadah penuh untuk angka pasti)</span></div></div>
+      <div class="field"><label class="chk" style="display:flex;gap:8px;align-items:center"><input type="checkbox" data-k="sil.garamKons" ${si.garamKons?'checked':''}> Konsentrat yang dipakai sudah mengandung garam (garam resep 0,3%, bukan 0,5%)</label></div>
     </div>
   </section>
   <section class="blk two">
@@ -1607,12 +1608,13 @@ function rSilase(){
         <div><span>Ampas tahu segar</span><b>${nf(amp,0)} kg</b></div>
         <div><span>Konsentrat PK ${o.pk}%</span><b>${nf(kn,1)} kg</b></div>
         <div><span>Molases</span><b>${nf(ml,1)} kg (±${nf(molL,1)} L)</b></div>
+        <div><span>Garam (${gp===.003?'0,3':'0,5'}% dari ampas + konsentrat + molases)</span><b>${nf(gr,1)} kg</b></div>
         ${o.kapur?`<div><span>Kapur pakan (CaCO₃)</span><b>${nf(kp,2)} kg</b></div><div><span>Probiotik starter (EM4/sejenis)</span><b>${nf(pb,2)} L</b></div>`:''}
         <div><span>Silase jadi</span><b>${nf(tot,0)} kg · ${nW} wadah</b></div>
       </div>
       <div class="row" style="margin-top:12px"><button class="btn orange" data-act="silToStok">Catat batch ini ke stok</button><span class="small muted">Bahan langsung terpotong dari stok QDF.</span></div>
       <div class="kpis" style="margin-top:12px">
-        <div class="kpi"><div class="lbl">Biaya batch</div><div class="v">${rp(cost)}</div><div class="s">${rp(tot?cost/tot:0)}/kg silase</div></div>
+        <div class="kpi"><div class="lbl">Biaya batch</div><div class="v">${rp(cost)}</div><div class="s">${rp(tot?cost/tot:0)}/kg silase · belum termasuk garam</div></div>
         <div class="kpi"><div class="lbl">PK silase</div><div class="v">${pc(c.pk)}</div><div class="s">TDN ${pc(c.tdn)} dari BK</div></div>
       </div>
       <div class="verdict ${bkW.c}"><b>${bkW.t}</b><div>${bkW.d}</div></div>
@@ -1623,7 +1625,7 @@ function rSilase(){
       <ol class="steps">
         <li><div><div class="st">Siapkan wadah dan tempat aduk</div>Cuci dan keringkan <span class="q">${nW} wadah</span> (±${nf(si.wadahKg,0)} kg per wadah). Gelar terpal bersih di tempat teduh. Wadah dan terpal harus kering, sisa air sabun mengganggu fermentasi.</div></li>
         <li><div><div class="st">Tiriskan ampas tahu</div>Tiriskan <span class="q">${nf(amp,0)} kg</span> ampas tahu 2–4 jam dalam karung sampai tidak menetes saat diperas. ${c.bk<.30?'<b>Penting untuk ransum ini karena campurannya tergolong basah.</b>':''} Ampas yang sudah berbau asam busuk jangan dipakai.</div></li>
-        <li><div><div class="st">Buat premix kering</div>Aduk <span class="q">${nf(kn,1)} kg konsentrat</span>${o.kapur?` dengan <span class="q">${nf(kp,2)} kg kapur pakan</span>`:''} sampai rata. ${o.kapur?'Kapur dicampur ke konsentrat dulu supaya tidak menggumpal di satu sisi.':''}</div></li>
+        <li><div><div class="st">Buat premix kering</div>Aduk <span class="q">${nf(kn,1)} kg konsentrat</span>${o.kapur?`, <span class="q">${nf(kp,2)} kg kapur pakan</span>`:''} dan <span class="q">${nf(gr,1)} kg garam</span> sampai rata. ${o.kapur?'Kapur dan garam dicampur ke konsentrat dulu supaya tidak menggumpal di satu sisi.':'Garam dicampur ke konsentrat dulu supaya tidak menggumpal di satu sisi.'}</div></li>
         <li><div><div class="st">Larutkan molases${o.kapur?' dan probiotik':''}</div>Encerkan <span class="q">${nf(ml,1)} kg molases</span>${o.kapur?` dan <span class="q">${nf(pb,2)} L probiotik</span>`:''} dengan air sumur/galon paling banyak <span class="q">${nf(air,1)} L</span>. Ampas tahu sudah basah, jadi air secukupnya saja. Jangan pakai air PAM berkaporit atau air panas karena mematikan bakteri.</div></li>
         <li><div><div class="st">Campur bertahap</div>Ratakan ampas tahu setebal ±10 cm di terpal, taburkan premix sedikit demi sedikit, siramkan larutan, lalu bolak-balik sampai warna seragam dan tidak ada gumpalan konsentrat.</div></li>
         <li><div><div class="st">Isi dan padatkan</div>Masukkan per lapis 10–15 cm, tekan/injak tiap lapis sampai udara keluar. Isi penuh sampai hampir ke bibir wadah (sisa ruang = udara = jamur).</div></li>
@@ -2233,7 +2235,8 @@ function getCT(path){return path.split('.').reduce((o,k)=>o==null?o:o[k],CT)}
 function sbRecalc(){
   const oi=CT.sb.opsi<0?S.aktif:CT.sb.opsi,c=calc(S.opsi[oi]).c,a=+CT.sb.ampas||0,N=NM();
   const kn=a*c.konsPerTon/1000,ml=a*c.molPerTon/1000,kp=a*c.kapurPerTon/1000,pb=a*c.probPerTon/1000;
-  CT.sb.v={[N.kons]:r1(kn),[N.mol]:r1(ml),[N.kapur]:r2(kp),[N.prob]:r2(pb),hasil:Math.round(a+kn+ml+kp)};
+  const gr=(a+kn+ml)*(S.sil.garamKons?.003:.005);CT.sb.gr=gr;
+  CT.sb.v={[N.kons]:r1(kn),[N.mol]:r1(ml),[N.kapur]:r2(kp),[N.prob]:r2(pb),hasil:Math.round(a+kn+ml+kp+gr)};
 }
 const r1=x=>Math.round(x*10)/10,r2=x=>Math.round(x*100)/100;
 function pkFill(){const K=kebutuhanHarian(),h=+CT.pk.hari||1,N=NM();CT.pk.v={[N.sil]:r1(K.sil*h),[N.odot]:r1(K.od*h*odW()),[N.kons]:K.kt>0?r1(K.kt*h):''}}
@@ -2255,6 +2258,7 @@ function rStokForm(){
       <div class="field"><label class="lbl">Ampas tahu dipakai (kg)</label>${cin('sb.ampas',{r:1,ph:'mis. 300',label:'Ampas tahu kg'})}<div class="hint">Stok ${nf(stokOf(N.ampas),1)} kg · <button class="linkbtn" data-act="sbAll">pakai semua</button></div></div></div>
       <div class="tw" style="margin-top:14px"><table class="t"><thead><tr><th>Bahan</th><th>Dipakai</th><th>Sisa stok</th></tr></thead><tbody>
       ${rows.map(([n,q,p])=>{const s=stokOf(n),u=satuan(by[n]);return `<tr><td class="l">${esc(n)}<div class="small muted">stok ${nf(s,u==='L'?2:1)} ${u}</div></td><td>${p==='sb.ampas'?nf(q,1):cin(p,{cls:'w4',label:n+' '+u})}</td><td>${q>s+1e-6?chip('bad','kurang '+nf(q-s,1)):nf(s-q,u==='L'?2:1)+' '+u}</td></tr>`}).join('')}
+      <tr><td class="l">Garam<div class="small muted">dicampur ke premix; belum ada slot master, jadi tidak dipotong dari stok</div></td><td>${nf(CT.sb.gr||0,1)} kg</td><td class="muted small">ikut hasil</td></tr>
       <tr class="sec"><td colspan="3">Hasil</td></tr><tr><td class="l"><b>Silase jadi (kg)</b><div class="small muted">stok ${nf(stokOf(N.sil),0)} kg</div></td><td>${cin('sb.v.hasil',{cls:'w4',label:'Silase jadi kg'})}</td><td>${chip('ok','+'+nf(+CT.sb.v.hasil||0,0)+' kg')}</td></tr>
       </tbody></table></div>
       <p class="note">Takaran otomatis dari resep ${esc(o.nama)} (rasio ${nf(o.r,1)}:1, molases ${pc(S.g.mol,0)}${o.kapur?', kapur & probiotik':''}). Boleh diubah sesuai yang benar-benar dipakai. Harga silase dihitung QDF dari harga rata-rata bahan.</p>
