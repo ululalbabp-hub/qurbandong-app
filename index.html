@@ -1563,7 +1563,7 @@ function rSilase(){
   const si=S.sil,oi=si.opsi<0?S.aktif:si.opsi,o=S.opsi[oi],R=calc(o),c=R.c,A=S.b.ampas,M=S.b.mol,T=S.t;
   const amp=+si.ampas||0,kn=amp*c.konsPerTon/1000,ml=amp*c.molPerTon/1000,kp=amp*c.kapurPerTon/1000,pb=amp*c.probPerTon/1000,gp=si.garamKons?.003:.005,gr=(amp+kn+ml)*gp,tot=amp+kn+ml+kp+gr;
   const molL=ml/1.4,air=Math.min(molL,amp*0.02);
-  const cost=amp*A.h+kn*c.K.h+ml*M.h+kp*T.hKapur+pb*T.hProb;
+  const gM=garamM(),cost=amp*A.h+kn*c.K.h+ml*M.h+kp*T.hKapur+pb*T.hProb+(gM?gr*(gM.harga||0):0);
   const F=feedAll(R),auto=F.filter(x=>x.aktif).reduce((a,x)=>a+x.sil,0);
   const kons2=si.mode==='auto'?auto:(+si.manual||0);
   const dur=kons2>0?tot/kons2:Infinity;
@@ -1614,7 +1614,7 @@ function rSilase(){
       </div>
       <div class="row" style="margin-top:12px"><button class="btn orange" data-act="silToStok">Catat batch ini ke stok</button><span class="small muted">Bahan langsung terpotong dari stok QDF.</span></div>
       <div class="kpis" style="margin-top:12px">
-        <div class="kpi"><div class="lbl">Biaya batch</div><div class="v">${rp(cost)}</div><div class="s">${rp(tot?cost/tot:0)}/kg silase · belum termasuk garam</div></div>
+        <div class="kpi"><div class="lbl">Biaya batch</div><div class="v">${rp(cost)}</div><div class="s">${rp(tot?cost/tot:0)}/kg silase${gM?'':' · belum termasuk garam'}</div></div>
         <div class="kpi"><div class="lbl">PK silase</div><div class="v">${pc(c.pk)}</div><div class="s">TDN ${pc(c.tdn)} dari BK</div></div>
       </div>
       <div class="verdict ${bkW.c}"><b>${bkW.t}</b><div>${bkW.d}</div></div>
@@ -1977,11 +1977,14 @@ function saveW(){
 /* ============ STOK PAKAN ============ */
 const NAMA_DEF={odot:'Rumput Odot',kons:'Konsentrat',ampas:'Ampas Tahu',mol:'Molases',kapur:'Kapur Pakan',prob:'Probiotik',sil:'Silase'};
 const NM=()=>(META&&META.nama)||NAMA_DEF;
+/* v63: garam ikut stok bila ada di Master Pakan */
+const garamM=()=>{const m=S.stok&&S.stok.master;return m?m.find(x=>/^garam$/i.test(String(x.nama).trim()))||null:null};
 function parseStok(PG,IP){
   if(!PG||!IP)return null;
   const h=PG.findIndex(r=>r&&String(r[2]||'').trim()==='Jenis Pakan');
   const master=[];
-  if(h>=0)for(let i=h+1;i<h+9&&i<PG.length;i++){const r=PG[i];if(r&&r[2]&&String(r[2]).trim())master.push({nama:String(r[2]).trim(),sat:r[3]||'kg',harga:+r[4]||0,awal:+r[5]||0,hAwal:+r[6]||+r[4]||0})}
+  /* v63: master pakan 16 slot (Pengaturan C11:G26). Baca baris selama kolom No berisi angka. */
+  if(h>=0)for(let i=h+1;i<h+41&&i<PG.length;i++){const r=PG[i];if(!r||!/^\d+$/.test(String(r[1]??'').trim()))break;if(r[2]&&String(r[2]).trim())master.push({nama:String(r[2]).trim(),sat:r[3]||'kg',harga:+r[4]||0,awal:+r[5]||0,hAwal:+r[6]||+r[4]||0})}
   const lim=re=>{const r=PG.find(r=>r&&re.test(String(r[2]||'')));return r&&typeof r[3]==='number'?r[3]:null};
   const hi=IP.findIndex(r=>r&&r[0]==='Tanggal'&&String(r[1]||'').trim()==='Jenis Pakan');
   const tx=hi<0?[]:IP.slice(hi+1).filter(r=>r&&r[1]&&(r[2]==='Masuk'||r[2]==='Keluar')&&typeof r[3]==='number').map(r=>({tgl:toISO(r[0]),jenis:String(r[1]).trim(),trx:r[2],kg:r[3],harga:typeof r[4]==='number'?r[4]:null,ket:r[5]?String(r[5]):'',nm:typeof r[6]==='number'?r[6]:null,nk:typeof r[8]==='number'?r[8]:null}));
@@ -2237,6 +2240,7 @@ function sbRecalc(){
   const kn=a*c.konsPerTon/1000,ml=a*c.molPerTon/1000,kp=a*c.kapurPerTon/1000,pb=a*c.probPerTon/1000;
   const gr=(a+kn+ml)*(S.sil.garamKons?.003:.005);CT.sb.gr=gr;
   CT.sb.v={[N.kons]:r1(kn),[N.mol]:r1(ml),[N.kapur]:r2(kp),[N.prob]:r2(pb),hasil:Math.round(a+kn+ml+kp+gr)};
+  const gM=garamM();if(gM)CT.sb.v[gM.nama]=r1(gr);
 }
 const r1=x=>Math.round(x*10)/10,r2=x=>Math.round(x*100)/100;
 function pkFill(){const K=kebutuhanHarian(),h=+CT.pk.hari||1,N=NM();CT.pk.v={[N.sil]:r1(K.sil*h),[N.odot]:r1(K.od*h*odW()),[N.kons]:K.kt>0?r1(K.kt*h):''}}
@@ -2251,14 +2255,14 @@ function rStokForm(){
   else if(CT.sk==='silase'){
     const oi=CT.sb.opsi<0?S.aktif:CT.sb.opsi,o=S.opsi[oi];
     if(CT.sb.ampas&&!CT.sb.v.hasil)sbRecalc();
-    const rows=[[N.ampas,+CT.sb.ampas||0,'sb.ampas']].concat([N.kons,N.mol].concat(o.kapur?[N.kapur,N.prob]:[]).map(n=>[n,+CT.sb.v[n]||0,'sb.v.'+n]));
+    const gM=garamM(),rows=[[N.ampas,+CT.sb.ampas||0,'sb.ampas']].concat([N.kons,N.mol].concat(o.kapur?[N.kapur,N.prob]:[]).concat(gM?[gM.nama]:[]).map(n=>[n,+CT.sb.v[n]||0,'sb.v.'+n]));
     const short=rows.filter(r=>r[1]>stokOf(r[0])+1e-6);
     body=`<div class="form">${tgl}
       <div class="field"><label class="lbl" for="cs-opsi">Resep</label><select id="cs-opsi" data-cs="sb.opsi" data-csr="1" data-num="1"><option value="-1" ${CT.sb.opsi<0?'selected':''}>Ransum aktif (${esc(S.opsi[S.aktif].nama.split(' · ')[0])})</option>${S.opsi.map((x,i)=>`<option value="${i}" ${CT.sb.opsi===i?'selected':''}>${esc(x.nama)}</option>`).join('')}</select></div>
       <div class="field"><label class="lbl">Ampas tahu dipakai (kg)</label>${cin('sb.ampas',{r:1,ph:'mis. 300',label:'Ampas tahu kg'})}<div class="hint">Stok ${nf(stokOf(N.ampas),1)} kg · <button class="linkbtn" data-act="sbAll">pakai semua</button></div></div></div>
       <div class="tw" style="margin-top:14px"><table class="t"><thead><tr><th>Bahan</th><th>Dipakai</th><th>Sisa stok</th></tr></thead><tbody>
       ${rows.map(([n,q,p])=>{const s=stokOf(n),u=satuan(by[n]);return `<tr><td class="l">${esc(n)}<div class="small muted">stok ${nf(s,u==='L'?2:1)} ${u}</div></td><td>${p==='sb.ampas'?nf(q,1):cin(p,{cls:'w4',label:n+' '+u})}</td><td>${q>s+1e-6?chip('bad','kurang '+nf(q-s,1)):nf(s-q,u==='L'?2:1)+' '+u}</td></tr>`}).join('')}
-      <tr><td class="l">Garam<div class="small muted">dicampur ke premix; belum ada slot master, jadi tidak dipotong dari stok</div></td><td>${nf(CT.sb.gr||0,1)} kg</td><td class="muted small">ikut hasil</td></tr>
+      ${gM?'':`<tr><td class="l">Garam<div class="small muted">dicampur ke premix; Garam belum ada di Master Pakan, jadi tidak dipotong dari stok</div></td><td>${nf(CT.sb.gr||0,1)} kg</td><td class="muted small">ikut hasil</td></tr>`}
       <tr class="sec"><td colspan="3">Hasil</td></tr><tr><td class="l"><b>Silase jadi (kg)</b><div class="small muted">stok ${nf(stokOf(N.sil),0)} kg</div></td><td>${cin('sb.v.hasil',{cls:'w4',label:'Silase jadi kg'})}</td><td>${chip('ok','+'+nf(+CT.sb.v.hasil||0,0)+' kg')}</td></tr>
       </tbody></table></div>
       <p class="note">Takaran otomatis dari resep ${esc(o.nama)} (rasio ${nf(o.r,1)}:1, molases ${pc(S.g.mol,0)}${o.kapur?', kapur & probiotik':''}). Boleh diubah sesuai yang benar-benar dipakai. Harga silase dihitung QDF dari harga rata-rata bahan.</p>
@@ -2308,7 +2312,7 @@ function saveS(){
   if(!GAS){toast('Mode pratinjau: data tidak disimpan');return}
   const N=NM();let d;
   if(CT.sk==='silase'){const oi=CT.sb.opsi<0?S.aktif:CT.sb.opsi,o=S.opsi[oi];
-    const bahan=[{jenis:N.ampas,kg:+CT.sb.ampas||0}].concat([N.kons,N.mol].concat(o.kapur?[N.kapur,N.prob]:[]).map(n=>({jenis:n,kg:+CT.sb.v[n]||0}))).filter(b=>b.kg>0);
+    const gM=garamM(),bahan=[{jenis:N.ampas,kg:+CT.sb.ampas||0}].concat([N.kons,N.mol].concat(o.kapur?[N.kapur,N.prob]:[]).concat(gM?[gM.nama]:[]).map(n=>({jenis:n,kg:+CT.sb.v[n]||0}))).filter(b=>b.kg>0);
     d={tipe:'silase',tanggal:CT.kTgl,bahan,hasil:+CT.sb.v.hasil||0,ket:o.nama,paksa:!!CT.sb.paksa}}
   else if(CT.sk==='pakai'){const h=+CT.pk.hari||1,W=odW(),lbl=h>1?`Pakan harian (${h} hari, app)`:'Pakan harian (app)',items=[];
     Object.entries(CT.pk.v).filter(([n,v])=>+v>0).forEach(([n,v])=>{v=+v;
