@@ -1,5 +1,5 @@
 /* Service worker Qurbandong: cangkang aplikasi langsung terbuka dari cache, pembaruan menyusul di belakang. */
-const CACHE = 'qf-v61';
+const CACHE = 'qf-v62';
 const ASSETS = ['./', './index.html', './manifest.webmanifest', './config.js', './icon-192.png', './icon-512.png', './icon-512-maskable.png', './apple-touch-icon.png'];
 self.addEventListener('install', function (e) {
   e.waitUntil(
